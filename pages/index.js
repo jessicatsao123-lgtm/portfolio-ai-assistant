@@ -26,7 +26,6 @@ export default function Home() {
   async function sendMessage(text) {
     const trimmed = (text || input).trim()
     if (!trimmed || isLoading) return
-
     if (!started) setStarted(true)
 
     const userMessage = { role: 'user', content: trimmed }
@@ -69,107 +68,89 @@ export default function Home() {
     <>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #06081a; }
 
-        @keyframes bounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-          30% { transform: translateY(-6px); opacity: 1; }
+        body {
+          background: linear-gradient(135deg, #FFFFFF 0%, #FFFCFA 100%);
+          min-height: 100vh;
         }
-        @keyframes float1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(40px, -30px) scale(1.08); }
-        }
-        @keyframes float2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-30px, 40px) scale(1.05); }
-        }
+
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30%           { transform: translateY(-5px); }
         }
         @keyframes pulse {
-          0%, 100% { opacity: 0.7; }
-          50% { opacity: 1; }
+          0%, 100% { opacity: 0.6; }
+          50%       { opacity: 1; }
         }
 
-        .msg-in { animation: fadeUp 0.3s ease forwards; }
+        .msg-in { animation: fadeUp 0.28s ease forwards; }
 
         .input-field {
+          flex: 1;
           background: transparent;
           border: none;
           outline: none;
-          flex: 1;
-          color: #fff;
-          font-size: 14px;
           font-family: inherit;
+          font-size: 14px;
+          color: #6B4030;
           line-height: 1.5;
         }
-        .input-field::placeholder { color: rgba(255,255,255,0.35); }
+        .input-field::placeholder { color: #C9A898; }
 
         .send-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
           border: none;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.15s ease;
           flex-shrink: 0;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
-        .send-btn:enabled:hover { transform: scale(1.05); }
+        .send-btn:enabled:hover  { transform: scale(1.05); }
         .send-btn:enabled:active { transform: scale(0.97); }
 
-        .suggestion-chip {
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.12);
+        .chip {
+          background: rgba(255,255,255,0.72);
+          border: 1px solid rgba(255,255,255,1);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           border-radius: 999px;
-          color: rgba(255,255,255,0.7);
-          font-size: 12px;
-          padding: 6px 14px;
+          padding: 7px 16px;
+          font-size: 12.5px;
+          font-family: inherit;
+          color: #BD8264;
           cursor: pointer;
           white-space: nowrap;
-          transition: all 0.15s ease;
-          font-family: inherit;
+          transition: background 0.15s ease, color 0.15s ease;
+          box-shadow: inset 0 1px 1px rgba(255,255,255,1), 0 2px 8px rgba(210,180,165,0.10);
         }
-        .suggestion-chip:hover {
-          background: rgba(255,255,255,0.13);
-          color: #fff;
-          border-color: rgba(255,255,255,0.25);
-        }
+        .chip:hover { background: rgba(255,255,255,0.90); color: #6B4030; }
 
-        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(180,140,120,0.2); border-radius: 4px; }
       `}</style>
 
-      {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, background: '#06081a', overflow: 'hidden', zIndex: 0 }}>
-        <div style={{
-          position: 'absolute', width: 700, height: 700,
-          borderRadius: '50%', top: '-15%', left: '-10%',
-          background: 'radial-gradient(circle, rgba(5,55,181,0.45) 0%, transparent 70%)',
-          animation: 'float1 12s ease-in-out infinite',
-          filter: 'blur(10px)',
-        }} />
-        <div style={{
-          position: 'absolute', width: 500, height: 500,
-          borderRadius: '50%', bottom: '-10%', right: '-5%',
-          background: 'radial-gradient(circle, rgba(253,94,205,0.35) 0%, transparent 70%)',
-          animation: 'float2 15s ease-in-out infinite',
-          filter: 'blur(10px)',
-        }} />
-        <div style={{
-          position: 'absolute', width: 300, height: 300,
-          borderRadius: '50%', top: '40%', right: '20%',
-          background: 'radial-gradient(circle, rgba(5,55,181,0.2) 0%, transparent 70%)',
-          animation: 'float1 9s ease-in-out infinite reverse',
-          filter: 'blur(8px)',
-        }} />
-      </div>
+      {/* Layered background */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0,
+        background: `
+          radial-gradient(120% 90% at 10% 6%,  rgba(255,236,218,0.40), transparent 48%),
+          radial-gradient(120% 90% at 94% 90%, rgba(253,231,228,0.35), transparent 50%),
+          radial-gradient(90%  80% at 84% 16%, rgba(255,248,240,0.50), transparent 44%),
+          radial-gradient(100% 90% at 20% 94%, rgba(253,238,236,0.30), transparent 52%),
+          linear-gradient(135deg, #FFFFFF 0%, #FFFCFA 100%)
+        `,
+      }} />
 
-      {/* Page */}
+      {/* Page layout */}
       <div style={{
         position: 'relative', zIndex: 1,
         minHeight: '100vh',
@@ -177,48 +158,55 @@ export default function Home() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px 16px',
+        padding: '32px 16px',
         fontFamily: "'Satoshi', system-ui, -apple-system, sans-serif",
       }}>
-        {/* Label */}
-        <div style={{ marginBottom: 20, textAlign: 'center' }}>
+
+        {/* Status pill */}
+        <div style={{
+          marginBottom: 24,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          background: 'rgba(255,255,255,0.72)',
+          border: '1px solid rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          borderRadius: 999,
+          padding: '7px 18px',
+          boxShadow: 'inset 0 1px 1px rgba(255,255,255,1), 0 4px 16px rgba(210,180,165,0.12)',
+        }}>
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 999, padding: '6px 14px',
-          }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: '50%',
-              backgroundColor: '#4ade80',
-              animation: 'pulse 2s ease infinite',
-            }} />
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, letterSpacing: '0.02em' }}>
-              Jess's AI Assistant
-            </span>
-          </div>
+            width: 7, height: 7, borderRadius: '50%',
+            background: '#82D9A0',
+            animation: 'pulse 2.2s ease infinite',
+          }} />
+          <span style={{ color: '#BD8264', fontSize: 12.5, letterSpacing: '0.01em', fontWeight: 500 }}>
+            Jess's AI Assistant
+          </span>
         </div>
 
         {/* Glass chat card */}
         <div style={{
           width: '100%',
           maxWidth: 560,
-          height: 560,
-          borderRadius: 24,
-          background: 'rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(32px)',
-          WebkitBackdropFilter: 'blur(32px)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 32px 80px rgba(0,0,0,0.5)',
+          height: 580,
+          borderRadius: 30,
+          background: 'rgba(255,255,255,0.62)',
+          backdropFilter: 'blur(20px) saturate(125%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(125%)',
+          border: '1px solid rgba(255,255,255,0.95)',
+          boxShadow: '0 16px 44px rgba(210,180,165,0.13), inset 0 1px 1px rgba(255,255,255,1)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
         }}>
-          {/* Messages area */}
+
+          {/* Messages */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '24px 20px 12px',
+            padding: '28px 28px 16px',
             display: 'flex',
             flexDirection: 'column',
             gap: 14,
@@ -230,18 +218,22 @@ export default function Home() {
               }}>
                 <div style={{
                   maxWidth: '78%',
-                  padding: '10px 15px',
-                  borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                  padding: '11px 16px',
+                  borderRadius: msg.role === 'user'
+                    ? '18px 18px 5px 18px'
+                    : '18px 18px 18px 5px',
                   fontSize: 14,
                   lineHeight: 1.6,
                   ...(msg.role === 'user' ? {
-                    background: '#0537B5',
-                    color: '#fff',
-                    boxShadow: '0 4px 16px rgba(5,55,181,0.4)',
+                    background: 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
+                    color: '#6B4030',
+                    border: '1px solid rgba(255,255,255,0.95)',
+                    boxShadow: '0 4px 16px rgba(210,160,130,0.14), inset 0 1px 1px rgba(255,255,255,1)',
                   } : {
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.9)',
+                    background: 'rgba(255,255,255,0.72)',
+                    border: '1px solid rgba(255,255,255,0.95)',
+                    color: '#6B4030',
+                    boxShadow: '0 2px 10px rgba(210,180,165,0.10), inset 0 1px 1px rgba(255,255,255,1)',
                   }),
                 }}>
                   {msg.content}
@@ -252,17 +244,18 @@ export default function Home() {
             {isLoading && (
               <div className="msg-in" style={{ display: 'flex', justifyContent: 'flex-start' }}>
                 <div style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '18px 18px 18px 4px',
-                  padding: '13px 18px',
+                  background: 'rgba(255,255,255,0.72)',
+                  border: '1px solid rgba(255,255,255,0.95)',
+                  borderRadius: '18px 18px 18px 5px',
+                  padding: '14px 18px',
                   display: 'flex', gap: 5, alignItems: 'center',
+                  boxShadow: '0 2px 10px rgba(210,180,165,0.10)',
                 }}>
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} style={{
+                  {[0, 1, 2].map((j) => (
+                    <div key={j} style={{
                       width: 6, height: 6, borderRadius: '50%',
-                      backgroundColor: 'rgba(255,255,255,0.6)',
-                      animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                      background: '#C9A898',
+                      animation: `bounce 1.2s ease-in-out ${j * 0.2}s infinite`,
                     }} />
                   ))}
                 </div>
@@ -271,29 +264,27 @@ export default function Home() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Suggestions (shown before first message) */}
+          {/* Suggestion chips */}
           {!started && (
             <div style={{
-              padding: '0 20px 14px',
+              padding: '0 28px 16px',
               display: 'flex', gap: 8, flexWrap: 'wrap',
             }}>
               {SUGGESTIONS.map((s) => (
-                <button key={s} className="suggestion-chip" onClick={() => sendMessage(s)}>
-                  {s}
-                </button>
+                <button key={s} className="chip" onClick={() => sendMessage(s)}>{s}</button>
               ))}
             </div>
           )}
 
           {/* Divider */}
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 20px' }} />
+          <div style={{ height: 1, background: 'rgba(210,180,165,0.18)', margin: '0 28px' }} />
 
           {/* Input row */}
           <div style={{
-            padding: '14px 20px',
+            padding: '16px 28px',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 12,
           }}>
             <input
               ref={inputRef}
@@ -312,13 +303,14 @@ export default function Home() {
               disabled={isLoading || !input.trim()}
               style={{
                 background: isLoading || !input.trim()
-                  ? 'rgba(255,255,255,0.08)'
-                  : '#0537B5',
-                color: isLoading || !input.trim()
-                  ? 'rgba(255,255,255,0.3)'
-                  : '#fff',
+                  ? 'rgba(255,255,255,0.72)'
+                  : 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
+                color: isLoading || !input.trim() ? '#C9A898' : '#8F5E48',
                 cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
-                boxShadow: !isLoading && input.trim() ? '0 4px 12px rgba(5,55,181,0.5)' : 'none',
+                border: '1px solid rgba(255,255,255,0.95)',
+                boxShadow: !isLoading && input.trim()
+                  ? '0 4px 14px rgba(210,160,130,0.20), inset 0 1px 1px rgba(255,255,255,1)'
+                  : 'inset 0 1px 1px rgba(255,255,255,1)',
               }}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -329,7 +321,12 @@ export default function Home() {
           </div>
         </div>
 
-        <p style={{ marginTop: 16, color: 'rgba(255,255,255,0.25)', fontSize: 11, letterSpacing: '0.02em' }}>
+        <p style={{
+          marginTop: 18,
+          color: '#C9A898',
+          fontSize: 11.5,
+          letterSpacing: '0.02em',
+        }}>
           Powered by Gemini — answers based on Jess's knowledge base
         </p>
       </div>
