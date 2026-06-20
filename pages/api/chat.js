@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import fs from 'fs';
 import path from 'path';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 let cachedKnowledgeBase = null;
 
 function getKnowledgeBase() {
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   const ownerEmail = process.env.OWNER_EMAIL || 'the contact email listed on the site';
   const knowledgeBase = getKnowledgeBase();
 
-  const systemInstruction = `You are a helpful assistant embedded in ${ownerName}'s portfolio website. Your job is to answer questions about ${ownerName} and their work.
+  const systemPrompt = `You are a helpful assistant embedded in ${ownerName}'s portfolio website. Your job is to answer questions about ${ownerName} and their work.
 
 Answer based ONLY on the information provided in the knowledge base below. Do not make anything up.
 
@@ -55,40 +55,31 @@ ${knowledgeBase}
 ---`;
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction,
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 500,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...history.slice(-6),
+        { role: 'user', content: message.trim() },
+      ],
     });
 
-    const geminiHistory = history.slice(-6).map((msg) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    }));
-
-    const chat = model.startChat({ history: geminiHistory });
-    const result = await chat.sendMessage(message.trim());
-    const reply = result.response.text();
-
+    const reply = response.choices[0]?.message?.content || '';
     return res.status(200).json({ response: reply });
   } catch (error) {
-    // Log full error details for debugging
-    console.error('Gemini API error:', {
+    console.error('Groq API error:', {
       message: error.message,
       status: error.status,
-      statusText: error.statusText,
-      errorDetails: error.errorDetails,
     });
 
     const status = error.status ?? error.statusCode;
 
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       return res.status(500).json({ error: 'API key error — check Vercel environment variables' });
     }
     if (status === 429) {
       return res.status(429).json({ error: 'Too many requests — please try again in a moment' });
-    }
-    if (status === 404) {
-      return res.status(500).json({ error: 'Model not found — contact the site owner' });
     }
 
     return res.status(500).json({ error: error.message || 'Something went wrong. Please try again.' });

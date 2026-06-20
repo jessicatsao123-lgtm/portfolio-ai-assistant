@@ -1,7 +1,7 @@
 {
   "name": "portfolio-ai-assistant",
   "version": "1.0.0",
-  "description": "Open-source AI chat assistant for your portfolio, powered by Gemini Flash. Clone, edit knowledge-base.md, deploy to Vercel.",
+  "description": "Open-source AI chat assistant for your portfolio, powered by Groq + Llama. Clone, edit knowledge-base.md, deploy to Vercel.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "next": "^14.2.0",
-    "@google/generative-ai": "^0.21.0"
+    "groq-sdk": "^0.7.0"
   },
   "engines": {
     "node": ">=18.0.0"
