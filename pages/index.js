@@ -7,11 +7,11 @@ const SUGGESTIONS = [
 ]
 
 export default function Home() {
-  const [mode, setMode] = useState('formal')
+  const [mode, setMode] = useState('jess')
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi! I'm here to answer questions about Jess — her projects, skills, background, or anything else. What would you like to know?",
+      content: "hey! i'm jess's AI — ask me anything, i got u. projects, skills, whatever you're curious about!",
     },
   ])
   const [input, setInput] = useState('')
