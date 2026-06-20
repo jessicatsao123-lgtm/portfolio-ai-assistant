@@ -1,16 +1,42 @@
-import fs from 'fs';
-import path from 'path';
+const PORTFOLIO_URL = process.env.PORTFOLIO_URL || 'https://jesstsao-portfolio.netlify.app';
+const CACHE_TTL = 60 * 60 * 1000; // refresh portfolio content every hour
 
-let cachedKnowledgeBase = null;
+let portfolioCache = { content: null, fetchedAt: 0 };
 
-function getKnowledgeBase() {
-  if (!cachedKnowledgeBase) {
-    cachedKnowledgeBase = fs.readFileSync(
-      path.join(process.cwd(), 'data', 'knowledge-base.md'),
-      'utf-8'
-    );
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 12000); // keep within context limits
+}
+
+async function getPortfolioContent() {
+  const now = Date.now();
+  if (portfolioCache.content && now - portfolioCache.fetchedAt < CACHE_TTL) {
+    return portfolioCache.content;
   }
-  return cachedKnowledgeBase;
+
+  const res = await fetch(PORTFOLIO_URL, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PortfolioBot/1.0)' },
+  });
+
+  if (!res.ok) throw new Error(`Failed to fetch portfolio: ${res.status}`);
+
+  const html = await res.text();
+  const content = stripHtml(html);
+
+  portfolioCache = { content, fetchedAt: now };
+  return content;
 }
 
 export default async function handler(req, res) {
@@ -35,22 +61,29 @@ export default async function handler(req, res) {
 
   const ownerName = process.env.OWNER_NAME || 'the portfolio owner';
   const ownerEmail = process.env.OWNER_EMAIL || 'the contact email listed on the site';
-  const knowledgeBase = getKnowledgeBase();
+
+  let portfolioContent;
+  try {
+    portfolioContent = await getPortfolioContent();
+  } catch (err) {
+    console.error('Failed to fetch portfolio:', err.message);
+    return res.status(500).json({ error: 'Could not load portfolio content. Please try again.' });
+  }
 
   const systemPrompt = `You are a helpful assistant embedded in ${ownerName}'s portfolio website. Answer questions about ${ownerName} and their work.
 
-Answer based ONLY on the information in the knowledge base below. Do not make anything up.
+Answer based ONLY on the portfolio content below. Do not make anything up.
 
 Guidelines:
 - Keep answers concise — 2-3 sentences max
 - Be friendly and conversational
-- If you don't know, say: "I don't have that info — reach out directly at ${ownerEmail}"
-- Never fabricate projects, skills, dates, or facts not in the knowledge base
+- If you can't find the answer in the content, say: "I don't have that info — reach out directly at ${ownerEmail}"
+- Never fabricate projects, skills, dates, or facts not in the portfolio
 - Only answer questions about ${ownerName} and their work
 
----
-${knowledgeBase}
----`;
+--- PORTFOLIO CONTENT ---
+${portfolioContent}
+--- END ---`;
 
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
