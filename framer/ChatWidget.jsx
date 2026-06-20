@@ -2,75 +2,25 @@
 // Portfolio AI Chat Widget — Framer Embed
 // ============================================================
 // SETUP:
-//   1. Deploy this repo to Vercel (vercel.com) and add your
-//      GROQ_API_KEY environment variable there.
-//   2. Paste your Vercel URL into API_URL below.
-//   3. Fill in YOUR_NAME, YOUR_EMAIL, TRIGGER_LABEL.
-//   4. Edit KNOWLEDGE_BASE with everything about you.
-//   5. In Framer: Assets → Code → "+ New file" → paste → Save
-//      Then drag "ChatWidget" onto any page.
+//   1. Deploy this repo to Vercel and add your env vars there
+//   2. Paste your Vercel URL into API_URL below
+//   3. In Framer: Assets → Code → "+ New file" → paste → Save
+//      Then drag "ChatWidget" onto any page
 // ============================================================
 
 import { useState, useRef, useEffect } from "react"
 
 // ============================================================
-// YOUR VERCEL URL  (the only thing that connects to the backend)
+// YOUR VERCEL URL
 // ============================================================
 const API_URL = "https://portfolio-ai-assistant-five.vercel.app/api/chat"
 
 // ============================================================
 // YOUR DETAILS
 // ============================================================
-const YOUR_NAME     = "Jess"
-const YOUR_EMAIL    = "jessicatsao123@gmail.com"
-const TRIGGER_LABEL  = "Ask Jess"
+const YOUR_NAME       = "Jess"
+const TRIGGER_LABEL   = "Ask Jess"
 const ASSISTANT_LABEL = "Jess's AI"
-
-// ============================================================
-// YOUR KNOWLEDGE BASE
-// Write anything you want the AI to know about you.
-// Plain sentences, no special format needed.
-// The more detail, the better the answers.
-// ============================================================
-const KNOWLEDGE_BASE = `
-Name: Jessica (Jess) Tsao
-Email: jessicatsao123@gmail.com
-LinkedIn: linkedin.com/in/jessicatsao
-
-About:
-Jess is a product designer and creative technologist. She combines
-strong UI/UX skills with hands-on technical ability — comfortable in
-Figma, Framer, React, Next.js, Three.js, and more. She also does
-digital art, video, and photography.
-
-Projects:
-- IR Reporting Hub: Built for Mondi to streamline annual integrated
-  report production end-to-end. Significantly reduced manual work.
-- [Add your next project name]: [short description]
-- [Add another]: [short description]
-
-Skills:
-- Design: Figma, Framer, UI/UX, brand identity, motion design
-- Frontend: React, Next.js, Three.js, Tailwind CSS, Framer
-- Creative: digital art, photography, video editing
-- [Add more skills here]
-
-Experience:
-- [Company] — [Role] ([dates])
-- [Company] — [Role] ([dates])
-
-Education:
-- [School] — [Degree] ([year])
-
-Fun facts:
-- [Something personal]
-- [Something else]
-`
-
-// ============================================================
-// GREETING  (use \n to split into separate bubbles)
-// ============================================================
-const GREETING = `hey! think of me as the AI ver. of ${YOUR_NAME} lol\nask me anything — projects, skills, what she's been up to, whatever`
 
 // ============================================================
 // Colors — edit to match your brand
@@ -90,6 +40,8 @@ const C = {
 // ============================================================
 // DO NOT EDIT BELOW THIS LINE
 // ============================================================
+
+const GREETING = `hey! think of me as the AI ver. of ${YOUR_NAME} lol\nask me anything — projects, skills, what she's been up to, whatever`
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen]     = useState(false)
@@ -122,12 +74,7 @@ export default function ChatWidget() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          history,
-          mode: "jess",
-          knowledgeBase: KNOWLEDGE_BASE,
-        }),
+        body: JSON.stringify({ message: text, history, mode: "jess" }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "failed")
@@ -172,7 +119,6 @@ export default function ChatWidget() {
           backdropFilter: "blur(20px) saturate(125%)",
           display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
-
           {/* Header */}
           <div style={{ padding: "14px 18px", background: "rgba(255,255,255,0.7)", borderBottom: "1px solid rgba(201,134,110,0.15)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -197,7 +143,6 @@ export default function ChatWidget() {
                 </div>
               )
             )}
-
             {isLoading && (
               <div style={{ display: "flex", gap: 4, padding: "10px 14px", alignItems: "center" }}>
                 {[0,1,2].map(i => (
