@@ -1,113 +1,95 @@
 // ============================================================
-// Portfolio AI Chat Widget — Framer Embed (standalone, no server needed)
+// Portfolio AI Chat Widget — Framer Embed
 // ============================================================
-// SETUP (3 steps):
-//   1. Get a free Groq API key at console.groq.com
-//   2. Fill in your details below (key, name, email, bio)
-//   3. In Framer: Assets → Code → "+ New file" → paste this → Save
+// SETUP:
+//   1. Deploy this repo to Vercel (vercel.com) and add your
+//      GROQ_API_KEY environment variable there.
+//   2. Paste your Vercel URL into API_URL below.
+//   3. Fill in YOUR_NAME, YOUR_EMAIL, TRIGGER_LABEL.
+//   4. Edit KNOWLEDGE_BASE with everything about you.
+//   5. In Framer: Assets → Code → "+ New file" → paste → Save
 //      Then drag "ChatWidget" onto any page.
 // ============================================================
 
 import { useState, useRef, useEffect } from "react"
 
 // ============================================================
-// STEP 1 — YOUR GROQ API KEY
-// Get one free at https://console.groq.com
+// YOUR VERCEL URL  (the only thing that connects to the backend)
 // ============================================================
-const GROQ_API_KEY = "your_groq_api_key_here"
+const API_URL = "https://portfolio-ai-assistant-five.vercel.app/api/chat"
 
 // ============================================================
-// STEP 2 — YOUR DETAILS
+// YOUR DETAILS
 // ============================================================
-const YOUR_NAME    = "Jess"
-const YOUR_EMAIL   = "jessicatsao123@gmail.com"
-const TRIGGER_LABEL = "Ask Jess"          // text on the floating button
-const ASSISTANT_LABEL = "Jess's AI"       // text in the chat header
+const YOUR_NAME     = "Jess"
+const YOUR_EMAIL    = "jessicatsao123@gmail.com"
+const TRIGGER_LABEL  = "Ask Jess"
+const ASSISTANT_LABEL = "Jess's AI"
 
 // ============================================================
-// STEP 3 — YOUR KNOWLEDGE BASE
+// YOUR KNOWLEDGE BASE
 // Write anything you want the AI to know about you.
-// Plain text, no special format needed.
-// The more detail you add, the better the answers.
+// Plain sentences, no special format needed.
+// The more detail, the better the answers.
 // ============================================================
 const KNOWLEDGE_BASE = `
 Name: Jessica (Jess) Tsao
-Role: Product designer and creative technologist
 Email: jessicatsao123@gmail.com
-LinkedIn: linkedin.com/in/jessicatsao (update with your real URL)
+LinkedIn: linkedin.com/in/jessicatsao
 
 About:
-Jess is a product designer and creative technologist based in [your city].
-She combines strong UI/UX skills with hands-on technical ability —
-comfortable in Figma, Framer, React, Next.js, Three.js, and more.
-She also does digital art, video, and photography.
+Jess is a product designer and creative technologist. She combines
+strong UI/UX skills with hands-on technical ability — comfortable in
+Figma, Framer, React, Next.js, Three.js, and more. She also does
+digital art, video, and photography.
 
 Projects:
-- IR Reporting Hub: Built for Mondi to streamline annual report production end-to-end.
-  Reduced manual work significantly. Stack: [your stack].
-- [Add your next project here]
-- [Add another project here]
+- IR Reporting Hub: Built for Mondi to streamline annual integrated
+  report production end-to-end. Significantly reduced manual work.
+- [Add your next project name]: [short description]
+- [Add another]: [short description]
 
 Skills:
-- Design: Figma, Framer, UI/UX, brand, motion
-- Frontend: React, Next.js, Three.js, Tailwind CSS
+- Design: Figma, Framer, UI/UX, brand identity, motion design
+- Frontend: React, Next.js, Three.js, Tailwind CSS, Framer
 - Creative: digital art, photography, video editing
-- Other: [add yours]
+- [Add more skills here]
 
 Experience:
-- [Company / role / dates]
-- [Company / role / dates]
+- [Company] — [Role] ([dates])
+- [Company] — [Role] ([dates])
 
 Education:
-- [School / degree / year]
+- [School] — [Degree] ([year])
 
 Fun facts:
-- [Something personal and interesting]
-- [Another one]
+- [Something personal]
+- [Something else]
 `
+
+// ============================================================
+// GREETING  (use \n to split into separate bubbles)
+// ============================================================
+const GREETING = `hey! think of me as the AI ver. of ${YOUR_NAME} lol\nask me anything — projects, skills, what she's been up to, whatever`
 
 // ============================================================
 // Colors — edit to match your brand
 // ============================================================
 const C = {
-  accent:       "#C9866E",
-  userBubble:   "#C9866E",
-  userText:     "#FFFFFF",
-  aiBubble:     "rgba(255,255,255,0.82)",
-  aiText:       "#6B4030",
-  textMuted:    "#C9A898",
-  inputBorder:  "rgba(201,134,110,0.25)",
-  bg:           "linear-gradient(135deg, #FFFFFF, #FFFCFA)",
-  shadow:       "0 20px 60px rgba(180,100,70,0.18), 0 4px 16px rgba(0,0,0,0.06)",
+  accent:      "#C9866E",
+  userBubble:  "#C9866E",
+  userText:    "#FFFFFF",
+  aiBubble:    "rgba(255,255,255,0.82)",
+  aiText:      "#6B4030",
+  textMuted:   "#C9A898",
+  inputBorder: "rgba(201,134,110,0.25)",
+  bg:          "linear-gradient(135deg, #FFFFFF, #FFFCFA)",
+  shadow:      "0 20px 60px rgba(180,100,70,0.18), 0 4px 16px rgba(0,0,0,0.06)",
 }
-
-// ============================================================
-// Greeting — what shows up when someone opens the chat
-// Use \n to split into separate bubbles
-// ============================================================
-const GREETING = `hey! think of me as the AI ver. of ${YOUR_NAME} lol\nask me anything — projects, skills, what she's been up to, whatever`
 
 // ============================================================
 // DO NOT EDIT BELOW THIS LINE
 // ============================================================
-
-const SYSTEM_PROMPT = `you're ${YOUR_NAME} — answering questions about yourself in first person. be real, warm, casual, a little chaotic in the best way.
-
-reply like you're texting. each thought on its own line. short lines only — the UI renders each line as its own bubble.
-
-vocab to use naturally (not all at once): lol, lmao, lowkey, ngl, tbh, omg, wdym, yeaaa, nahh, kinda, emmm..., ok so, yeah so, oh!, wanna, u, ur, rn, tho, lmk
-
-sign-offs (rotate, never repeat): "wanna know more?", "any other q's?", "lmk!", "what else u got?", "hit me with another one", "ok ur turn"
-
-contact: always give ${YOUR_EMAIL} when asked. never say you don't have contact info.
-
-SCOPE RULE: only answer questions about ${YOUR_NAME} and her work. if asked anything else, say "lol that's a bit outside my lane — ask me something about jess!"
-
-never invent facts. if something isn't in the knowledge base below, say "emmm i don't have that one on me rn" then give the email.
-
---- knowledge base ---
-${KNOWLEDGE_BASE}
---- end ---`
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen]     = useState(false)
@@ -132,35 +114,26 @@ export default function ChatWidget() {
     setLoading(true)
 
     const history = next
-      .slice(1)
+      .slice(1, -1)
       .slice(-8)
       .map(m => ({ role: m.role, content: m.lines.join("\n") }))
 
     try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const res = await fetch(API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${GROQ_API_KEY}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...history,
-          ],
-          max_tokens: 300,
-          temperature: 0.8,
+          message: text,
+          history,
+          mode: "jess",
+          knowledgeBase: KNOWLEDGE_BASE,
         }),
       })
-
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error?.message || "failed")
-
-      const reply = data.choices?.[0]?.message?.content || ""
-      const lines = reply.split("\n").map(l => l.trim()).filter(Boolean)
+      if (!res.ok) throw new Error(data.error || "failed")
+      const lines = data.response.split("\n").map(l => l.trim()).filter(Boolean)
       setMessages(prev => [...prev, { role: "assistant", lines }])
-    } catch (err) {
+    } catch {
       setMessages(prev => [
         ...prev,
         { role: "assistant", lines: ["something went wrong — try again in a sec"] },
@@ -174,8 +147,7 @@ export default function ChatWidget() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() }
   }
 
-  // Styles
-  const pill = j => ({
+  const bubbleStyle = j => ({
     background: C.aiBubble,
     backdropFilter: "blur(8px)",
     border: "1px solid rgba(255,255,255,0.8)",
@@ -194,8 +166,7 @@ export default function ChatWidget() {
         <div style={{
           position: "absolute", bottom: 64, right: 0,
           width: 340, height: 500,
-          background: C.bg,
-          borderRadius: 28,
+          background: C.bg, borderRadius: 28,
           boxShadow: C.shadow,
           border: "1px solid rgba(255,255,255,0.9)",
           backdropFilter: "blur(20px) saturate(125%)",
@@ -203,24 +174,16 @@ export default function ChatWidget() {
         }}>
 
           {/* Header */}
-          <div style={{
-            padding: "14px 18px",
-            background: "rgba(255,255,255,0.7)",
-            borderBottom: "1px solid rgba(201,134,110,0.15)",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
+          <div style={{ padding: "14px 18px", background: "rgba(255,255,255,0.7)", borderBottom: "1px solid rgba(201,134,110,0.15)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6BCB77" }} />
               <span style={{ color: "#6B4030", fontWeight: 700, fontSize: 14 }}>{ASSISTANT_LABEL}</span>
             </div>
-            <button onClick={() => setIsOpen(false)}
-              style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 2 }}>
-              ×
-            </button>
+            <button onClick={() => setIsOpen(false)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 2 }}>×</button>
           </div>
 
           {/* Messages */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 6 }}>
             {messages.map((msg, i) =>
               msg.role === "user" ? (
                 <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -230,7 +193,7 @@ export default function ChatWidget() {
                 </div>
               ) : (
                 <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                  {msg.lines.map((line, j) => <div key={j} style={pill(j)}>{line}</div>)}
+                  {msg.lines.map((line, j) => <div key={j} style={bubbleStyle(j)}>{line}</div>)}
                 </div>
               )
             )}

@@ -120,7 +120,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [], mode = 'jess' } = req.body;
+  const { message, history = [], mode = 'jess', knowledgeBase } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'Message is required' });
@@ -135,12 +135,17 @@ export default async function handler(req, res) {
   const ownerName = process.env.OWNER_NAME || 'the portfolio owner';
   const ownerEmail = process.env.OWNER_EMAIL || 'the contact email listed on the site';
 
+  // Use knowledge base sent from the widget, or fall back to scraping the portfolio URL
   let portfolioContent;
-  try {
-    portfolioContent = await getPortfolioContent();
-  } catch (err) {
-    console.error('Failed to fetch portfolio:', err.message);
-    return res.status(500).json({ error: 'Could not load portfolio content. Please try again.' });
+  if (knowledgeBase && typeof knowledgeBase === 'string' && knowledgeBase.trim().length > 0) {
+    portfolioContent = knowledgeBase.trim();
+  } else {
+    try {
+      portfolioContent = await getPortfolioContent();
+    } catch (err) {
+      console.error('Failed to fetch portfolio:', err.message);
+      return res.status(500).json({ error: 'Could not load portfolio content. Please try again.' });
+    }
   }
 
   const systemPrompt = buildSystemPrompt(mode, ownerName, ownerEmail, portfolioContent);
