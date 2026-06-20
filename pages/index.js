@@ -18,7 +18,7 @@ export default function Home() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "hey! i'm jess's AI — ask me anything, i got u. projects, skills, whatever you're curious about!",
+      content: "hey! think of me as the AI ver. of jess lol\nask me anything — projects, skills, what she's been up to, whatever",
     },
   ])
   const [input, setInput] = useState('')
@@ -32,7 +32,7 @@ export default function Home() {
     setMessages([{
       role: 'assistant',
       content: newMode === 'jess'
-        ? "hey! i'm jess's AI — ask me anything, i got u. projects, skills, whatever you're curious about!"
+        ? "hey! think of me as the AI ver. of jess lol\nask me anything — projects, skills, what she's been up to, whatever"
         : "Hi! I'm here to answer questions about Jess — her projects, skills, background, or anything else. What would you like to know?",
     }])
   }
