@@ -7,6 +7,7 @@ const SUGGESTIONS = [
 ]
 
 export default function Home() {
+  const [mode, setMode] = useState('formal')
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -16,6 +17,18 @@ export default function Home() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [started, setStarted] = useState(false)
+
+  function switchMode(newMode) {
+    if (newMode === mode) return
+    setMode(newMode)
+    setStarted(false)
+    setMessages([{
+      role: 'assistant',
+      content: newMode === 'jess'
+        ? "hey! i'm jess's AI — ask me anything, i got u. projects, skills, whatever you're curious about!"
+        : "Hi! I'm here to answer questions about Jess — her projects, skills, background, or anything else. What would you like to know?",
+    }])
+  }
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -40,7 +53,7 @@ export default function Home() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed, history }),
+        body: JSON.stringify({ message: trimmed, history, mode }),
       })
       const data = await res.json()
       setMessages((prev) => [
@@ -202,11 +215,47 @@ export default function Home() {
           overflow: 'hidden',
         }}>
 
+          {/* Mode toggle */}
+          <div style={{
+            padding: '16px 28px 0',
+            display: 'flex',
+            gap: 6,
+          }}>
+            {[
+              { key: 'formal', label: 'Professional' },
+              { key: 'jess', label: 'Jess Mode' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => switchMode(key)}
+                style={{
+                  padding: '5px 14px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(255,255,255,0.95)',
+                  fontSize: 12,
+                  fontFamily: 'inherit',
+                  fontWeight: mode === key ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  background: mode === key
+                    ? 'linear-gradient(145deg, #FFF3E6, #FFDBCE)'
+                    : 'rgba(255,255,255,0.50)',
+                  color: mode === key ? '#6B4030' : '#BD8264',
+                  boxShadow: mode === key
+                    ? '0 2px 10px rgba(210,160,130,0.18), inset 0 1px 1px rgba(255,255,255,1)'
+                    : 'inset 0 1px 1px rgba(255,255,255,0.8)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* Messages */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '28px 28px 16px',
+            padding: '16px 28px 16px',
             display: 'flex',
             flexDirection: 'column',
             gap: 14,

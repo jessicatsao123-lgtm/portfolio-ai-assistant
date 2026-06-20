@@ -1,5 +1,5 @@
 const PORTFOLIO_URL = process.env.PORTFOLIO_URL || 'https://jesstsao-portfolio.netlify.app';
-const CACHE_TTL = 60 * 60 * 1000; // refresh portfolio content every hour
+const CACHE_TTL = 60 * 60 * 1000;
 
 let portfolioCache = { content: null, fetchedAt: 0 };
 
@@ -17,7 +17,7 @@ function stripHtml(html) {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 12000); // keep within context limits
+    .slice(0, 12000);
 }
 
 async function getPortfolioContent() {
@@ -25,18 +25,48 @@ async function getPortfolioContent() {
   if (portfolioCache.content && now - portfolioCache.fetchedAt < CACHE_TTL) {
     return portfolioCache.content;
   }
-
   const res = await fetch(PORTFOLIO_URL, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PortfolioBot/1.0)' },
   });
-
   if (!res.ok) throw new Error(`Failed to fetch portfolio: ${res.status}`);
-
   const html = await res.text();
   const content = stripHtml(html);
-
   portfolioCache = { content, fetchedAt: now };
   return content;
+}
+
+function buildSystemPrompt(mode, ownerName, ownerEmail, portfolioContent) {
+  if (mode === 'jess') {
+    return `you're jess — answering questions about yourself in your own voice. be real, be warm, be you.
+
+rules:
+- always first person. "i worked on...", "my latest project was...", never "she" or "jess"
+- keep it short and punchy — 2-3 sentences max, then maybe a follow-up like "wanna know more?" or "wassup, got more q's?"
+- use casual language naturally: btw, fyi, tbh, ngl, omg, lol — but don't overdo it
+- use filler phrases like "hmm...", "oh!", "ok so...", "yeah so..." to sound natural
+- if someone asks about a project say something like "oh that one! so basically..." or "hmm the last one i worked on was..."
+- end with a little invitation to keep chatting: "wanna know more?", "wassup, any other q's?", "lmk if u wanna dig deeper!"
+- if you don't know something: "hmm i don't have that on me rn — shoot me an email at ${ownerEmail} tho!"
+- only answer based on the portfolio content below — don't make stuff up, just say it casually
+
+--- portfolio content ---
+${portfolioContent}
+--- end ---`;
+  }
+
+  // formal mode (default)
+  return `You are a professional assistant for ${ownerName}'s portfolio website. Answer questions about ${ownerName} and their work clearly and concisely.
+
+Guidelines:
+- Refer to ${ownerName} in the third person
+- Keep answers to 2-3 sentences — informative but brief
+- Professional and friendly tone — helpful, not stiff
+- If you can't find the answer: "I don't have that information — please reach out directly at ${ownerEmail}"
+- Only answer based on the portfolio content below. Do not fabricate anything.
+
+--- portfolio content ---
+${portfolioContent}
+--- end ---`;
 }
 
 export default async function handler(req, res) {
@@ -47,7 +77,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [] } = req.body;
+  const { message, history = [], mode = 'formal' } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'Message is required' });
@@ -70,20 +100,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Could not load portfolio content. Please try again.' });
   }
 
-  const systemPrompt = `You are a helpful assistant embedded in ${ownerName}'s portfolio website. Answer questions about ${ownerName} and their work.
-
-Answer based ONLY on the portfolio content below. Do not make anything up.
-
-Guidelines:
-- Keep answers concise — 2-3 sentences max
-- Be friendly and conversational
-- If you can't find the answer in the content, say: "I don't have that info — reach out directly at ${ownerEmail}"
-- Never fabricate projects, skills, dates, or facts not in the portfolio
-- Only answer questions about ${ownerName} and their work
-
---- PORTFOLIO CONTENT ---
-${portfolioContent}
---- END ---`;
+  const systemPrompt = buildSystemPrompt(mode, ownerName, ownerEmail, portfolioContent);
 
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
