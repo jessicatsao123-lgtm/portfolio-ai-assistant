@@ -1,8 +1,6 @@
-import Groq from 'groq-sdk';
 import fs from 'fs';
 import path from 'path';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 let cachedKnowledgeBase = null;
 
 function getKnowledgeBase() {
@@ -39,49 +37,52 @@ export default async function handler(req, res) {
   const ownerEmail = process.env.OWNER_EMAIL || 'the contact email listed on the site';
   const knowledgeBase = getKnowledgeBase();
 
-  const systemPrompt = `You are a helpful assistant embedded in ${ownerName}'s portfolio website. Your job is to answer questions about ${ownerName} and their work.
+  const systemPrompt = `You are a helpful assistant embedded in ${ownerName}'s portfolio website. Answer questions about ${ownerName} and their work.
 
-Answer based ONLY on the information provided in the knowledge base below. Do not make anything up.
+Answer based ONLY on the information in the knowledge base below. Do not make anything up.
 
 Guidelines:
 - Keep answers concise — 2-3 sentences max
-- Be friendly and conversational, like a well-informed colleague introducing someone
-- If you don't have the answer, say: "I don't have that info — reach out directly at ${ownerEmail}"
+- Be friendly and conversational
+- If you don't know, say: "I don't have that info — reach out directly at ${ownerEmail}"
 - Never fabricate projects, skills, dates, or facts not in the knowledge base
-- Stay on topic: only answer questions about ${ownerName} and their work
+- Only answer questions about ${ownerName} and their work
 
 ---
 ${knowledgeBase}
 ---`;
 
   try {
-    const response = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      max_tokens: 500,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...history.slice(-6),
-        { role: 'user', content: message.trim() },
-      ],
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        max_tokens: 500,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...history.slice(-6),
+          { role: 'user', content: message.trim() },
+        ],
+      }),
     });
 
-    const reply = response.choices[0]?.message?.content || '';
+    if (!groqRes.ok) {
+      const err = await groqRes.json().catch(() => ({}));
+      console.error('Groq error:', groqRes.status, err);
+      if (groqRes.status === 401) return res.status(500).json({ error: 'API key error — check Vercel environment variables' });
+      if (groqRes.status === 429) return res.status(429).json({ error: 'Too many requests — please try again in a moment' });
+      return res.status(500).json({ error: err?.error?.message || 'Something went wrong. Please try again.' });
+    }
+
+    const data = await groqRes.json();
+    const reply = data.choices?.[0]?.message?.content || '';
     return res.status(200).json({ response: reply });
   } catch (error) {
-    console.error('Groq API error:', {
-      message: error.message,
-      status: error.status,
-    });
-
-    const status = error.status ?? error.statusCode;
-
-    if (status === 401) {
-      return res.status(500).json({ error: 'API key error — check Vercel environment variables' });
-    }
-    if (status === 429) {
-      return res.status(429).json({ error: 'Too many requests — please try again in a moment' });
-    }
-
-    return res.status(500).json({ error: error.message || 'Something went wrong. Please try again.' });
+    console.error('Fetch error:', error.message);
+    return res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 }
