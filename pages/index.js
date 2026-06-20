@@ -222,8 +222,8 @@ export default function Home() {
             gap: 6,
           }}>
             {[
-              { key: 'formal', label: 'Professional' },
               { key: 'jess', label: 'Jess Mode' },
+              { key: 'formal', label: 'Professional' },
             ].map(({ key, label }) => (
               <button
                 key={key}
