@@ -60,7 +60,6 @@ ${knowledgeBase}
       systemInstruction,
     });
 
-    // Gemini uses "model" instead of "assistant" for role names
     const geminiHistory = history.slice(-6).map((msg) => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }],
@@ -72,15 +71,26 @@ ${knowledgeBase}
 
     return res.status(200).json({ response: reply });
   } catch (error) {
-    console.error('Gemini API error:', error);
+    // Log full error details for debugging
+    console.error('Gemini API error:', {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      errorDetails: error.errorDetails,
+    });
 
-    if (error.status === 400) {
-      return res.status(500).json({ error: 'API configuration error — contact the site owner' });
+    const status = error.status ?? error.statusCode;
+
+    if (status === 401 || status === 403) {
+      return res.status(500).json({ error: 'API key error — check Vercel environment variables' });
     }
-    if (error.status === 429) {
+    if (status === 429) {
       return res.status(429).json({ error: 'Too many requests — please try again in a moment' });
     }
+    if (status === 404) {
+      return res.status(500).json({ error: 'Model not found — contact the site owner' });
+    }
 
-    return res.status(500).json({ error: 'Something went wrong. Please try again.' });
+    return res.status(500).json({ error: error.message || 'Something went wrong. Please try again.' });
   }
 }
