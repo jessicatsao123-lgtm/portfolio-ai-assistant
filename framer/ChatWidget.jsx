@@ -1,33 +1,39 @@
 // ============================================================
-// Portfolio AI Chat Widget
-// Paste this entire file into Framer: Assets > Code > New File
-// Then drag the component onto any page.
-//
-// BEFORE YOU USE: Update API_URL below to your Vercel deployment URL.
+// Portfolio AI Chat Widget — Framer Embed
+// ============================================================
+// HOW TO ADD TO FRAMER:
+//   1. Open your Framer project
+//   2. Left sidebar → Assets → Code → "+ New file"
+//   3. Name it "ChatWidget"
+//   4. Paste this entire file
+//   5. Update API_URL below to your Vercel URL
+//   6. Drag the "ChatWidget" component onto any page
+//      (it floats bottom-right automatically)
 // ============================================================
 
 import { useState, useRef, useEffect } from "react"
 
-// --- UPDATE THIS to your deployed Vercel URL ---
-const API_URL = "https://your-project.vercel.app/api/chat"
+// --- REQUIRED: paste your Vercel URL here ---
+const API_URL = "https://portfolio-ai-assistant-five.vercel.app/api/chat"
 
-// --- UPDATE THIS to your name (shown in the chat header) ---
+// --- Edit to match your name / brand ---
 const ASSISTANT_NAME = "Jess's AI"
+const TRIGGER_LABEL = "Ask Jess"
 
-// --- Colors — edit to match your brand ---
-const COLORS = {
-  accent: "#0537B5",       // electric blue — primary color
-  accentHover: "#042d8f",  // darker blue for hover
-  background: "#F8F7F4",   // off-white
-  surface: "#FFFFFF",
-  text: "#1A1A1A",
-  textMuted: "#6B6B6B",
-  userBubble: "#0537B5",
+// --- Warm glassmorphic brand colors ---
+const C = {
+  bg: "linear-gradient(135deg, #FFFFFF, #FFFCFA)",
+  glass: "rgba(255,255,255,0.82)",
+  accent: "#C9866E",
+  accentDeep: "#A8624E",
+  userBubble: "#C9866E",
   userText: "#FFFFFF",
-  assistantBubble: "#F0EFEC",
-  assistantText: "#1A1A1A",
-  inputBorder: "#E0DFDC",
-  highlight: "#FD5ECD",    // hot pink — used sparingly
+  aiBubble: "rgba(255,255,255,0.72)",
+  aiText: "#6B4030",
+  textMuted: "#C9A898",
+  border: "rgba(255,255,255,0.9)",
+  inputBg: "rgba(255,255,255,0.6)",
+  shadow: "0 20px 60px rgba(180,100,70,0.18), 0 4px 16px rgba(0,0,0,0.06)",
 }
 
 export default function ChatWidget() {
@@ -35,358 +41,240 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi! I'm here to answer questions about Jess — her projects, skills, background, or anything else. What would you like to know?",
+      lines: [
+        "hey! think of me as the AI ver. of jess lol",
+        "ask me anything — projects, skills, what she's been up to, whatever",
+      ],
     },
   ])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef(null)
+  const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-    }
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading])
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 120)
   }, [isOpen])
 
-  async function sendMessage() {
+  async function send() {
     const trimmed = input.trim()
     if (!trimmed || isLoading) return
 
-    const userMessage = { role: "user", content: trimmed }
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
+    const allMessages = [...messages, { role: "user", lines: [trimmed] }]
+    setMessages(allMessages)
     setInput("")
     setIsLoading(true)
 
-    // Build history for the API (exclude the initial greeting)
-    const history = updatedMessages
-      .slice(1) // skip the initial assistant greeting
-      .slice(-6) // last 6 messages for context
-      .map(({ role, content }) => ({ role, content }))
+    const history = allMessages
+      .slice(1, -1)
+      .slice(-6)
+      .map((m) => ({ role: m.role, content: m.lines.join("\n") }))
 
     try {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: trimmed,
-          history: history.slice(0, -1), // exclude the message we just added
-        }),
+        body: JSON.stringify({ message: trimmed, history, mode: "jess" }),
       })
-
       const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || "Request failed")
-      }
-
+      if (!res.ok) throw new Error(data.error || "failed")
+      const lines = data.response
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+      setMessages((prev) => [...prev, { role: "assistant", lines }])
+    } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.response },
-      ])
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Something went wrong — please try again in a moment.",
-        },
+        { role: "assistant", lines: ["something went wrong — try again in a sec"] },
       ])
     } finally {
       setIsLoading(false)
     }
   }
 
-  function handleKeyDown(e) {
+  function onKey(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      sendMessage()
+      send()
     }
   }
 
   return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999 }}>
-      {/* Chat Panel */}
+    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif" }}>
+
+      {/* Chat panel */}
       {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 60,
-            right: 0,
-            width: 340,
-            height: 480,
-            backgroundColor: COLORS.background,
-            borderRadius: 20,
-            boxShadow: "0 8px 40px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            fontFamily: "'Satoshi', 'Inter', system-ui, sans-serif",
-          }}
-        >
+        <div style={{
+          position: "absolute",
+          bottom: 64,
+          right: 0,
+          width: 340,
+          height: 500,
+          background: C.bg,
+          borderRadius: 28,
+          boxShadow: C.shadow,
+          border: `1px solid ${C.border}`,
+          backdropFilter: "blur(20px) saturate(125%)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}>
+
           {/* Header */}
-          <div
-            style={{
-              backgroundColor: COLORS.accent,
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor: "#4ade80",
-                }}
-              />
-              <span
-                style={{
-                  color: "#FFFFFF",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  fontFamily: "'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif",
-                  letterSpacing: "-0.01em",
-                }}
-              >
+          <div style={{
+            padding: "14px 18px",
+            background: "rgba(255,255,255,0.7)",
+            borderBottom: `1px solid rgba(201,134,110,0.15)`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6BCB77" }} />
+              <span style={{ color: "#6B4030", fontWeight: 700, fontSize: 14, letterSpacing: "-0.01em" }}>
                 {ASSISTANT_NAME}
               </span>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "rgba(255,255,255,0.7)",
-                cursor: "pointer",
-                padding: 4,
-                lineHeight: 1,
-                fontSize: 18,
-              }}
-              aria-label="Close chat"
-            >
-              &times;
-            </button>
+            <button onClick={() => setIsOpen(false)} style={{
+              background: "none", border: "none", color: C.textMuted,
+              cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 2,
+            }}>×</button>
           </div>
 
           {/* Messages */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "12px 14px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-                }}
-              >
-                <div
-                  style={{
+          <div style={{
+            flex: 1, overflowY: "auto", padding: "14px 14px",
+            display: "flex", flexDirection: "column", gap: 6,
+          }}>
+            {messages.map((msg, i) =>
+              msg.role === "user" ? (
+                <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <div style={{
+                    background: C.userBubble, color: C.userText,
+                    borderRadius: "16px 16px 4px 16px",
+                    padding: "9px 14px", fontSize: 13.5, lineHeight: 1.5,
                     maxWidth: "82%",
-                    backgroundColor:
-                      msg.role === "user"
-                        ? COLORS.userBubble
-                        : COLORS.assistantBubble,
-                    color:
-                      msg.role === "user"
-                        ? COLORS.userText
-                        : COLORS.assistantText,
-                    borderRadius: msg.role === "user"
-                      ? "16px 16px 4px 16px"
-                      : "16px 16px 16px 4px",
-                    padding: "9px 13px",
-                    fontSize: 13.5,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {msg.content}
+                  }}>{msg.lines[0]}</div>
                 </div>
-              </div>
-            ))}
-
-            {/* Loading indicator */}
-            {isLoading && (
-              <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                <div
-                  style={{
-                    backgroundColor: COLORS.assistantBubble,
-                    borderRadius: "16px 16px 16px 4px",
-                    padding: "10px 14px",
-                    display: "flex",
-                    gap: 4,
-                    alignItems: "center",
-                  }}
-                >
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        backgroundColor: COLORS.textMuted,
-                        animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
-                      }}
-                    />
+              ) : (
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                  {msg.lines.map((line, j) => (
+                    <div key={j} style={{
+                      background: C.aiBubble,
+                      backdropFilter: "blur(8px)",
+                      border: `1px solid rgba(255,255,255,0.8)`,
+                      color: C.aiText,
+                      borderRadius: j === 0
+                        ? "16px 16px 16px 4px"
+                        : "4px 16px 16px 4px",
+                      padding: "9px 14px", fontSize: 13.5, lineHeight: 1.5,
+                      maxWidth: "82%",
+                      animationDelay: `${j * 80}ms`,
+                    }}>{line}</div>
                   ))}
                 </div>
-              </div>
+              )
             )}
 
-            <div ref={messagesEndRef} />
+            {isLoading && (
+              <div style={{ display: "flex", gap: 4, padding: "10px 14px", alignItems: "center" }}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: C.textMuted,
+                    animation: `chatbounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                  }} />
+                ))}
+              </div>
+            )}
+            <div ref={bottomRef} />
           </div>
 
           {/* Input */}
-          <div
-            style={{
-              padding: "10px 12px",
-              borderTop: `1px solid ${COLORS.inputBorder}`,
-              display: "flex",
-              gap: 8,
-              backgroundColor: COLORS.surface,
-            }}
-          >
+          <div style={{
+            padding: "10px 12px",
+            borderTop: `1px solid rgba(201,134,110,0.12)`,
+            background: "rgba(255,255,255,0.6)",
+            display: "flex", gap: 8,
+          }}>
             <input
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={onKey}
               placeholder="Ask anything about Jess..."
               maxLength={500}
               disabled={isLoading}
               style={{
-                flex: 1,
-                border: `1px solid ${COLORS.inputBorder}`,
-                borderRadius: 12,
-                padding: "8px 12px",
-                fontSize: 13.5,
-                fontFamily: "inherit",
-                color: COLORS.text,
-                backgroundColor: COLORS.background,
+                flex: 1, border: `1px solid rgba(201,134,110,0.25)`,
+                borderRadius: 12, padding: "8px 12px",
+                fontSize: 13.5, fontFamily: "inherit",
+                color: "#6B4030", background: C.inputBg,
                 outline: "none",
-                resize: "none",
               }}
             />
             <button
-              onClick={sendMessage}
+              onClick={send}
               disabled={isLoading || !input.trim()}
               style={{
-                backgroundColor:
-                  isLoading || !input.trim()
-                    ? COLORS.inputBorder
-                    : COLORS.accent,
-                color:
-                  isLoading || !input.trim() ? COLORS.textMuted : "#FFFFFF",
-                border: "none",
-                borderRadius: 12,
-                width: 38,
-                height: 38,
-                cursor:
-                  isLoading || !input.trim() ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                transition: "background-color 0.15s ease",
+                background: isLoading || !input.trim() ? "rgba(201,134,110,0.2)" : C.accent,
+                color: isLoading || !input.trim() ? C.textMuted : "#fff",
+                border: "none", borderRadius: 12,
+                width: 38, height: 38, cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, transition: "background 0.15s",
               }}
-              aria-label="Send message"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M22 2L11 13"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M22 2L15 22L11 13L2 9L22 2Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
           </div>
         </div>
       )}
 
-      {/* Floating trigger button */}
+      {/* Floating pill button */}
       <button
-        onClick={() => setIsOpen((prev) => !prev)}
-        style={{
-          backgroundColor: COLORS.accent,
-          color: "#FFFFFF",
-          border: "none",
-          borderRadius: 24,
-          padding: "10px 18px",
-          cursor: "pointer",
-          fontFamily: "'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif",
-          fontWeight: 700,
-          fontSize: 14,
-          letterSpacing: "-0.01em",
-          boxShadow: "0 4px 16px rgba(5, 55, 181, 0.35)",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          transition: "transform 0.15s ease, box-shadow 0.15s ease",
-          whiteSpace: "nowrap",
-        }}
+        onClick={() => setIsOpen((p) => !p)}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "translateY(-2px)"
-          e.currentTarget.style.boxShadow = "0 6px 20px rgba(5, 55, 181, 0.45)"
+          e.currentTarget.style.boxShadow = "0 8px 24px rgba(201,134,110,0.45)"
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "translateY(0)"
-          e.currentTarget.style.boxShadow = "0 4px 16px rgba(5, 55, 181, 0.35)"
+          e.currentTarget.style.boxShadow = "0 4px 16px rgba(201,134,110,0.3)"
         }}
-        aria-label={isOpen ? "Close chat" : "Ask Jess's AI"}
+        style={{
+          background: C.accent, color: "#fff", border: "none",
+          borderRadius: 24, padding: "11px 20px",
+          cursor: "pointer", fontWeight: 700, fontSize: 14,
+          letterSpacing: "-0.01em",
+          boxShadow: "0 4px 16px rgba(201,134,110,0.3)",
+          display: "flex", alignItems: "center", gap: 8,
+          transition: "transform 0.15s, box-shadow 0.15s",
+          whiteSpace: "nowrap",
+        }}
       >
         {isOpen ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M18 6L6 18M6 6L18 18"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
           </svg>
         ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
-        {isOpen ? "Close" : "Ask Jess"}
+        {isOpen ? "Close" : TRIGGER_LABEL}
       </button>
 
-      {/* Bounce animation keyframes */}
       <style>{`
-        @keyframes bounce {
+        @keyframes chatbounce {
           0%, 60%, 100% { transform: translateY(0); }
           30% { transform: translateY(-5px); }
         }
