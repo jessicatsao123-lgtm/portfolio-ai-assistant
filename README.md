@@ -1,99 +1,136 @@
-# Portfolio AI Assistant
+# Portfolio AI Chat Widget
 
-An open-source AI chat widget for your portfolio, powered by Claude. Visitors can ask natural language questions about you and your work — "what's her latest project?", "what skills does she have?", "where's her LinkedIn?" — and get accurate answers from your own knowledge base.
+An open-source AI chat widget for your portfolio. Visitors can ask natural language questions about you — your projects, skills, background, how to reach you — and get answers in your own voice.
 
-Built with Next.js + the Anthropic SDK, embedded in Framer via a custom code component.
+Free to use. No paid API required. Fork it and make it yours.
 
 ---
 
 ## How it works
 
 ```
-Visitor types a question in Framer
-        |
-        v
-ChatWidget.jsx (Framer custom code)
-        |  fetch POST
-        v
-/api/chat.js (Next.js on Vercel)
-        |  claude-opus-4-8
-        v
-Claude reads knowledge-base.md
-        |
-        v
-Answer sent back to the widget
+Visitor asks a question in your Framer site
+           |
+           v
+  ChatWidget.jsx (Framer custom code)
+  — your knowledge base is written here —
+           |  sends: message + your content
+           v
+  /api/chat.js (your Vercel deployment)
+  — your Groq API key lives here —
+           |  calls Groq (free AI)
+           v
+  Reply sent back to the widget
 ```
+
+Your **API key** never leaves Vercel (safe).  
+Your **knowledge base** lives in the Framer widget (easy to edit, no code needed).
 
 ---
 
-## Setup (5 steps)
+## Setup
 
-### Step 1: Clone and install
+### 1. Get a free Groq API key
 
-```bash
-git clone https://github.com/YOUR_USERNAME/portfolio-ai-assistant.git
-cd portfolio-ai-assistant
-npm install
+Go to [console.groq.com](https://console.groq.com), sign up, and create an API key.  
+Groq is free — 14,400 requests/day on the free tier.
+
+### 2. Fork and deploy to Vercel
+
+1. Fork this repo on GitHub
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your fork
+3. In **Project Settings → Environment Variables**, add:
+
+| Variable | Value |
+|---|---|
+| `GROQ_API_KEY` | your key from console.groq.com |
+| `OWNER_NAME` | your name |
+| `OWNER_EMAIL` | your email |
+
+4. Deploy. Your API is now live at `https://your-project.vercel.app/api/chat`
+
+> **Never** put your API key in Framer or anywhere public. It lives only in Vercel.
+
+### 3. Add the widget to Framer
+
+1. Open `framer/ChatWidget.jsx` in this repo and copy the entire file
+2. In Framer: **Assets → Code → + New File** → name it `ChatWidget` → paste → Save
+3. At the top of the file, fill in your details:
+
+```js
+// Your Vercel URL
+const API_URL = "https://your-project.vercel.app/api/chat"
+
+// Your details
+const YOUR_NAME  = "Your Name"
+const YOUR_EMAIL = "you@email.com"
 ```
 
-### Step 2: Add your info
-
-Edit `data/knowledge-base.md` — replace everything with your own background, projects, skills, and links. The AI will only answer based on what's in this file, so be thorough.
-
-### Step 3: Set up environment variables locally
-
-```bash
-cp .env.example .env.local
-```
-
-Open `.env.local` and fill in:
-- `ANTHROPIC_API_KEY` — get yours at [console.anthropic.com](https://console.anthropic.com)
-- `OWNER_NAME` — your name
-- `OWNER_EMAIL` — your email (used in fallback responses)
-
-Test it locally:
-```bash
-npm run dev
-# Try: curl -X POST http://localhost:3000/api/chat -H "Content-Type: application/json" -d '{"message":"what projects have you worked on?"}'
-```
-
-### Step 4: Deploy to Vercel
-
-Push to GitHub, then:
-
-1. Go to [vercel.com](https://vercel.com) and import your repo
-2. In **Project Settings > Environment Variables**, add:
-   - `ANTHROPIC_API_KEY`
-   - `OWNER_NAME`
-   - `OWNER_EMAIL`
-3. Deploy. Your API will be live at `https://your-project.vercel.app/api/chat`
-
-**IMPORTANT:** Never put your API key in Framer or anywhere public. It lives only in Vercel's environment variables.
-
-### Step 5: Add the widget to Framer
-
-1. In Framer, go to **Assets > Code > + New File**
-2. Paste the contents of `framer/ChatWidget.jsx`
-3. At the top of the file, update `API_URL` to your Vercel URL:
-   ```js
-   const API_URL = "https://your-project.vercel.app/api/chat"
-   ```
-4. Update `ASSISTANT_NAME` to your name
-5. Adjust the `COLORS` object to match your brand
-6. Save, then drag the component onto any Framer page
-7. Publish your Framer site
+4. Edit the `KNOWLEDGE_BASE` block with your own info (see below)
+5. Drag the `ChatWidget` component onto any Framer page → Publish
 
 ---
 
-## Customisation
+## Editing your knowledge base
 
-**Change the AI's personality**: Edit the `systemPrompt` in `pages/api/chat.js`
+Everything the AI knows about you lives in the `KNOWLEDGE_BASE` block near the top of `ChatWidget.jsx` in Framer. Just edit it like a text document — no special format, no code knowledge needed.
 
-**Change colors**: Edit the `COLORS` object at the top of `framer/ChatWidget.jsx`
+```js
+const KNOWLEDGE_BASE = `
+Name: Your Name
+Email: you@email.com
 
-**Change the trigger button text**: Find `"Ask Jess"` in `ChatWidget.jsx` and replace with your name
+About:
+Write a few sentences about yourself here.
 
-**Change the greeting**: Edit the initial message in the `useState` at the top of `ChatWidget.jsx`
+Projects:
+- Project Name: short description
+- Another Project: short description
+
+Skills:
+- Design: Figma, Framer, etc.
+- Code: React, etc.
+
+Experience:
+- Company — Role (dates)
+
+Fun facts:
+- Something personal
+`
+```
+
+The AI will only answer from what you write here. If it's not in the knowledge base, it will say so and direct people to your email.
+
+---
+
+## Customising the personality
+
+All personality settings live in `jess.config.js` at the root of the repo. Edit it once, push to GitHub, and Vercel redeploys automatically.
+
+```js
+// jess.config.js
+
+modeNames: {
+  jess: 'Jess Mode',      // rename to whatever you want, e.g. "Chill"
+  formal: 'Professional', // e.g. "Work Mode"
+},
+
+greeting: "hey! ...",     // opening message (use \n for separate bubbles)
+
+vocab: ['lol', 'lowkey', ...],   // slang words the AI uses
+
+signOffs: ['wanna know more?', ...],  // how it ends replies (rotates)
+
+contactResponse: [        // what it says when asked how to reach you
+  "here's my email — you@email.com",
+  "find me on LinkedIn too",
+],
+
+suggestions: [            // quick-tap chips before the first message
+  'what have you been working on?',
+  ...
+],
+```
 
 ---
 
@@ -102,27 +139,40 @@ Push to GitHub, then:
 ```
 portfolio-ai-assistant/
 ├── pages/
-│   └── api/
-│       └── chat.js         ← Claude API route
-├── data/
-│   └── knowledge-base.md   ← YOUR info goes here
+│   ├── api/
+│   │   └── chat.js         ← Vercel API route (Groq call happens here)
+│   └── index.js            ← demo/test page
 ├── framer/
-│   └── ChatWidget.jsx      ← paste into Framer
-├── .env.example            ← copy to .env.local
+│   └── ChatWidget.jsx      ← paste this into Framer
+├── jess.config.js          ← personality settings (edit this)
+├── .env.example            ← copy to .env.local for local dev
 ├── .gitignore
 ├── package.json
-├── next.config.js
 └── README.md
 ```
 
 ---
 
-## Costs
+## Local development
 
-This uses Claude Opus via the Anthropic API. Each chat message costs roughly $0.01–$0.03 depending on length. For a portfolio with moderate traffic, expect under $5/month. Prompt caching is enabled by default to reduce repeated costs from the knowledge base.
+```bash
+git clone https://github.com/YOUR_USERNAME/portfolio-ai-assistant.git
+cd portfolio-ai-assistant
+npm install
+cp .env.example .env.local   # then fill in your keys
+npm run dev
+# open http://localhost:3000 to test the chat UI
+```
+
+---
+
+## Cost
+
+Free. Groq's free tier covers 14,400 requests/day — more than enough for a portfolio.  
+Vercel's free tier covers the backend.
 
 ---
 
 ## License
 
-MIT — fork it, use it, make it yours.
+MIT — fork it, customise it, make it yours.
