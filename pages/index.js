@@ -1,10 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 
-const SUGGESTIONS = [
-  'What projects has she worked on?',
-  'What are her skills?',
-  'How can I contact her?',
-]
+const SUGGESTIONS = {
+  jess: [
+    'what have you been working on?',
+    'what are you good at?',
+    'how do i reach you?',
+  ],
+  formal: [
+    'What projects has Jess worked on?',
+    'What are her skills?',
+    'How can I contact Jess?',
+  ],
+}
 
 export default function Home() {
   const [mode, setMode] = useState('jess')
@@ -333,7 +340,7 @@ export default function Home() {
               padding: '0 28px 16px',
               display: 'flex', gap: 8, flexWrap: 'wrap',
             }}>
-              {SUGGESTIONS.map((s) => (
+              {SUGGESTIONS[mode].map((s) => (
                 <button key={s} className="chip" onClick={() => sendMessage(s)}>{s}</button>
               ))}
             </div>
