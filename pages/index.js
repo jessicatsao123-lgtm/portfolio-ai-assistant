@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import jessConfig from '../jess.config.js'
 
 const SUGGESTIONS = {
   jess: [
@@ -229,8 +230,8 @@ export default function Home() {
             gap: 6,
           }}>
             {[
-              { key: 'jess', label: 'Jess Mode' },
-              { key: 'formal', label: 'Professional' },
+              { key: 'jess', label: jessConfig.modeNames.jess },
+              { key: 'formal', label: jessConfig.modeNames.formal },
             ].map(({ key, label }) => (
               <button
                 key={key}
