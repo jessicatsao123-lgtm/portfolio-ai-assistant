@@ -260,35 +260,49 @@ export default function Home() {
             flexDirection: 'column',
             gap: 14,
           }}>
-            {messages.map((msg, i) => (
-              <div key={i} className="msg-in" style={{
-                display: 'flex',
-                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              }}>
-                <div style={{
-                  maxWidth: '78%',
-                  padding: '11px 16px',
-                  borderRadius: msg.role === 'user'
-                    ? '18px 18px 5px 18px'
-                    : '18px 18px 18px 5px',
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                  ...(msg.role === 'user' ? {
-                    background: 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
-                    color: '#6B4030',
-                    border: '1px solid rgba(255,255,255,0.95)',
-                    boxShadow: '0 4px 16px rgba(210,160,130,0.14), inset 0 1px 1px rgba(255,255,255,1)',
-                  } : {
-                    background: 'rgba(255,255,255,0.72)',
-                    border: '1px solid rgba(255,255,255,0.95)',
-                    color: '#6B4030',
-                    boxShadow: '0 2px 10px rgba(210,180,165,0.10), inset 0 1px 1px rgba(255,255,255,1)',
-                  }),
+            {messages.map((msg, i) => {
+              const lines = msg.content
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => l.length > 0)
+
+              return (
+                <div key={i} style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  gap: 4,
                 }}>
-                  {msg.content}
+                  {lines.map((line, j) => (
+                    <div key={j} className="msg-in" style={{
+                      animationDelay: `${j * 80}ms`,
+                      maxWidth: '78%',
+                      padding: '10px 15px',
+                      borderRadius: msg.role === 'user'
+                        ? '18px 18px 5px 18px'
+                        : j === 0
+                          ? '18px 18px 18px 5px'
+                          : '5px 18px 18px 5px',
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      ...(msg.role === 'user' ? {
+                        background: 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
+                        color: '#6B4030',
+                        border: '1px solid rgba(255,255,255,0.95)',
+                        boxShadow: '0 4px 16px rgba(210,160,130,0.14), inset 0 1px 1px rgba(255,255,255,1)',
+                      } : {
+                        background: 'rgba(255,255,255,0.72)',
+                        border: '1px solid rgba(255,255,255,0.95)',
+                        color: '#6B4030',
+                        boxShadow: '0 2px 10px rgba(210,180,165,0.10), inset 0 1px 1px rgba(255,255,255,1)',
+                      }),
+                    }}>
+                      {line}
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             {isLoading && (
               <div className="msg-in" style={{ display: 'flex', justifyContent: 'flex-start' }}>
