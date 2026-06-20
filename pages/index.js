@@ -327,7 +327,7 @@ export default function Home() {
           fontSize: 11.5,
           letterSpacing: '0.02em',
         }}>
-          Powered by Gemini — answers based on Jess's knowledge base
+          Powered by Groq — answers based on Jess's knowledge base
         </p>
       </div>
     </>
