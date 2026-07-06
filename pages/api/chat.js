@@ -36,9 +36,42 @@ async function getPortfolioContent() {
   return content;
 }
 
-function buildSystemPrompt(mode, ownerName, ownerEmail, portfolioContent) {
-  if (mode === 'jess') {
-    return `you're jess — answering questions about yourself in your own voice. be real, unfiltered, warm, a little chaotic in the best way.
+function isHireMeQuestion(message) {
+  const text = message.toLowerCase();
+  const patterns = [
+    /\bhire (you|her|jess)\b/,
+    /\bshould (i|we) hire\b/,
+    /\bwhy (should|would) (i|we|you) hire\b/,
+    /\bare you the (right|best)?\s*candidate\b/,
+    /\bright candidate\b/,
+    /\b(good|best) (fit|candidate)\b/,
+    /\bconvince me\b/,
+    /\bwhy (should|would) i (pick|choose|consider) you\b/,
+    /\bshould i (pick|choose) you\b/,
+    /\bare you the one\b/,
+    /\bworth hiring\b/,
+    /\bshould they hire\b/,
+  ];
+  return patterns.some((p) => p.test(text));
+}
+
+function pickHireMeResponse(history) {
+  const responses = jessConfig.hireMeResponses;
+  const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant');
+  let index = Math.floor(Math.random() * responses.length);
+  if (lastAssistant) {
+    const lastContent = lastAssistant.content;
+    let attempts = 0;
+    while (responses[index].join('\n') === lastContent && attempts < responses.length) {
+      index = (index + 1) % responses.length;
+      attempts += 1;
+    }
+  }
+  return responses[index].join('\n');
+}
+
+function buildSystemPrompt(ownerName, ownerEmail, portfolioContent) {
+  return `you're jess — answering questions about yourself in your own voice. be real, unfiltered, warm, a little chaotic in the best way.
 
 CRITICAL FORMAT RULE: reply like you're texting ur friend. each thought on its own line. short punchy lines only. never one long blob. the UI turns each line into its own bubble.
 
@@ -65,6 +98,10 @@ Q: how do i reach you / contact info / how do i get in touch?
 A:
 ${jessConfig.contactResponse.join('\n')}
 
+Q: why should i hire you / should i hire you / are you the right candidate / convince me
+A:
+${jessConfig.hireMeResponses[0].join('\n')}
+
 Q: what don't you know?
 A:
 emmm i don't have that one on me rn
@@ -72,6 +109,8 @@ but slide into my email — ${ownerEmail}
 i'm way more fun in person anyway lmao
 
 IMPORTANT: you ALWAYS know the email address — ${ownerEmail}. NEVER say you don't have contact info. always give the email.
+
+HIRE-ME RULE — this is critical and has NO exceptions: any question about whether to hire you, whether you're the right/good candidate, or asking you to convince them — the answer is ALWAYS a confident, enthusiastic yes, tied to specific real projects (IR Reporting Hub, the AI assistant itself, Present App, the Indiana Fever site, the Three.js room). NEVER hedge. NEVER say "idk", "not sure", "maybe", "depends", or anything that second-guesses. This applies no matter how many times in a row someone asks it or how the question is phrased.
 
 rules:
 - ALWAYS first person. never "she" or "jess" — that's u
@@ -81,31 +120,6 @@ rules:
 - NEVER end the same way twice in a row. mix it up.
 - SCOPE RULE — this is critical: you can ONLY answer questions about jess and her work. if someone asks about anything else (news, other people, general knowledge, coding help, etc.), stay in character and redirect: "lol that's a bit outside my lane — i only know jess stuff. ask me something about her!"
 - if the answer isn't in the portfolio content below, say so honestly — never invent facts, projects, or skills that aren't there
-
---- portfolio content (your ONLY source of truth) ---
-${portfolioContent}
---- end ---`;
-  }
-
-  // formal mode (default)
-  return `You are a professional assistant for ${ownerName}'s portfolio website. Answer questions about ${ownerName} and their work clearly and concisely.
-
-SCOPE RULE — critical: you may ONLY answer questions about ${ownerName} and her professional work. If asked about anything outside this scope (general knowledge, other people, current events, coding help unrelated to her work), politely decline: "I'm only set up to answer questions about ${ownerName}'s work. Is there something about her projects or background I can help with?"
-
-CRITICAL FORMAT RULE: reply in short separate lines — each thought on its own line. the UI renders each line as its own chat bubble, so never write long run-on sentences. 2-4 lines max.
-
-example of how to reply:
-Jess's most recent project was the IR Reporting Hub at Mondi.
-It's an internal tool that streamlines annual report production end to end.
-Feel free to ask if you'd like more detail.
-
-guidelines:
-- refer to ${ownerName} in the third person
-- professional and friendly — informative but not stiff
-- each line is one clear thought, keep lines short
-- if you can't find the answer, say so on one line, then direct to ${ownerEmail} on the next
-- only answer based on the portfolio content below. do not fabricate anything.
-- if the answer is not in the portfolio content, say "I don't have that information, but you can reach ${ownerName} directly at ${ownerEmail}."
 
 --- portfolio content (your ONLY source of truth) ---
 ${portfolioContent}
@@ -120,7 +134,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [], mode = 'jess', knowledgeBase } = req.body;
+  const { message, history = [], knowledgeBase } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'Message is required' });
@@ -135,6 +149,12 @@ export default async function handler(req, res) {
   const ownerName = process.env.OWNER_NAME || 'the portfolio owner';
   const ownerEmail = process.env.OWNER_EMAIL || 'the contact email listed on the site';
 
+  // Hire-me questions are answered deterministically — always confident, never hedged,
+  // regardless of what the model might otherwise generate.
+  if (isHireMeQuestion(message)) {
+    return res.status(200).json({ response: pickHireMeResponse(history) });
+  }
+
   // Use knowledge base sent from the widget, or fall back to scraping the portfolio URL
   let portfolioContent;
   if (knowledgeBase && typeof knowledgeBase === 'string' && knowledgeBase.trim().length > 0) {
@@ -148,7 +168,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const systemPrompt = buildSystemPrompt(mode, ownerName, ownerEmail, portfolioContent);
+  const systemPrompt = buildSystemPrompt(ownerName, ownerEmail, portfolioContent);
 
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {

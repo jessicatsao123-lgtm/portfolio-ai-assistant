@@ -1,42 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import jessConfig from '../jess.config.js'
 
-const SUGGESTIONS = {
-  jess: [
-    'what have you been working on?',
-    'what are you good at?',
-    'how do i reach you?',
-  ],
-  formal: [
-    'What projects has Jess worked on?',
-    'What are her skills?',
-    'How can I contact Jess?',
-  ],
-}
-
 export default function Home() {
-  const [mode, setMode] = useState('jess')
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "hey! think of me as the AI ver. of jess lol\nask me anything — projects, skills, what she's been up to, whatever",
+      content: jessConfig.greeting,
     },
   ])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [started, setStarted] = useState(false)
-
-  function switchMode(newMode) {
-    if (newMode === mode) return
-    setMode(newMode)
-    setStarted(false)
-    setMessages([{
-      role: 'assistant',
-      content: newMode === 'jess'
-        ? "hey! think of me as the AI ver. of jess lol\nask me anything — projects, skills, what she's been up to, whatever"
-        : "Hi! I'm here to answer questions about Jess — her projects, skills, background, or anything else. What would you like to know?",
-    }])
-  }
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -61,7 +35,7 @@ export default function Home() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed, history, mode }),
+        body: JSON.stringify({ message: trimmed, history }),
       })
       const data = await res.json()
       setMessages((prev) => [
@@ -223,47 +197,11 @@ export default function Home() {
           overflow: 'hidden',
         }}>
 
-          {/* Mode toggle */}
-          <div style={{
-            padding: '16px 28px 0',
-            display: 'flex',
-            gap: 6,
-          }}>
-            {[
-              { key: 'jess', label: jessConfig.modeNames.jess },
-              { key: 'formal', label: jessConfig.modeNames.formal },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => switchMode(key)}
-                style={{
-                  padding: '5px 14px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(255,255,255,0.95)',
-                  fontSize: 12,
-                  fontFamily: 'inherit',
-                  fontWeight: mode === key ? 600 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  background: mode === key
-                    ? 'linear-gradient(145deg, #FFF3E6, #FFDBCE)'
-                    : 'rgba(255,255,255,0.50)',
-                  color: mode === key ? '#6B4030' : '#BD8264',
-                  boxShadow: mode === key
-                    ? '0 2px 10px rgba(210,160,130,0.18), inset 0 1px 1px rgba(255,255,255,1)'
-                    : 'inset 0 1px 1px rgba(255,255,255,0.8)',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
           {/* Messages */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '16px 28px 16px',
+            padding: '24px 28px 16px',
             display: 'flex',
             flexDirection: 'column',
             gap: 14,
@@ -341,7 +279,7 @@ export default function Home() {
               padding: '0 28px 16px',
               display: 'flex', gap: 8, flexWrap: 'wrap',
             }}>
-              {SUGGESTIONS[mode].map((s) => (
+              {jessConfig.suggestions.map((s) => (
                 <button key={s} className="chip" onClick={() => sendMessage(s)}>{s}</button>
               ))}
             </div>

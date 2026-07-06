@@ -74,7 +74,7 @@ export default function ChatWidget() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history, mode: "jess" }),
+        body: JSON.stringify({ message: text, history }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "failed")
