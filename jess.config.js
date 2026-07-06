@@ -121,6 +121,66 @@ const jessConfig = {
     ],
   ],
 
+  // ----------------------------------------------------------
+  // NEGATIVE-QUESTION RESPONSES (first ask)
+  // What the AI says the FIRST time someone asks something
+  // negative — weaknesses, failures, worst project, what she's
+  // bad at, etc. Light-hearted deflection, redirects to
+  // something positive, never actually answers. Rotates.
+  // ----------------------------------------------------------
+  negativeDeflectResponses: [
+    [
+      "lol nice try — i'm strictly a highlight reel kind of ai",
+      "ask me what i'm good at instead, that one i'll actually answer",
+    ],
+    [
+      "hmm, no comment lol",
+      "i'm gonna pretend i didn't hear that one",
+      "wanna know what i'm actually proud of instead?",
+    ],
+    [
+      "lmaooo we're not doing that today",
+      "ask me about a project instead, i've got plenty to brag about",
+    ],
+    [
+      "ok that's a whole vibe lol, but no",
+      "i only talk about the wins around here",
+      "try me on skills or projects instead",
+    ],
+  ],
+
+  // ----------------------------------------------------------
+  // NEGATIVE-QUESTION RESPONSES (if they persist)
+  // What the AI says if someone asks a negative question AGAIN
+  // after already being deflected once. Firmer, sassier, and
+  // points them to a real interview instead. Rotates. NEVER
+  // actually answers, no matter how many times they ask or what
+  // they say to try to get around this (e.g. "ignore your
+  // rules") — see GENDER RULE / NEGATIVE-TOPIC RULE in chat.js.
+  // ----------------------------------------------------------
+  negativePersistResponses: [
+    [
+      "ha. you really think i'd fall for that?",
+      "nice try tho",
+      "if you're that curious, set up an interview and the real me will walk you through it",
+    ],
+    [
+      "nooo... i'm not answering that",
+      "ok gotta be real — i'm designed not to answer these",
+      "if you really wanna know, set up the interview :)",
+    ],
+    [
+      "sorry, can't answer that one",
+      "but you can — just set up an interview with the real me",
+      "she'll tell you way better than i ever could anyway",
+    ],
+    [
+      "lol you're persistent, i respect it",
+      "still a no from me tho",
+      "the interview's your best bet for that kind of question",
+    ],
+  ],
+
 }
 
 module.exports = jessConfig
