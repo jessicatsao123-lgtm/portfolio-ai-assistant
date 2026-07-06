@@ -2,12 +2,16 @@ import { useState, useRef, useEffect } from 'react'
 import jessConfig from '../jess.config.js'
 
 export default function Home() {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: jessConfig.greeting,
-    },
+  // Onboarding runs once at the start of every session: ask name, then
+  // identity (unused for personalization — see jess.config.js). Only
+  // `userName` is ever sent to the API or used to personalize replies.
+  const [onboardingStep, setOnboardingStep] = useState('askName') // 'askName' | 'askIdentity' | 'done'
+  const [onboardingMessages, setOnboardingMessages] = useState([
+    { role: 'assistant', content: jessConfig.onboardingAskName },
   ])
+  const [userName, setUserName] = useState(null)
+
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [started, setStarted] = useState(false)
@@ -16,11 +20,36 @@ export default function Home() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+  }, [messages, onboardingMessages, isLoading])
 
   async function sendMessage(text) {
     const trimmed = (text || input).trim()
     if (!trimmed || isLoading) return
+
+    if (onboardingStep !== 'done') {
+      const userMsg = { role: 'user', content: trimmed }
+      setInput('')
+
+      if (onboardingStep === 'askName') {
+        const name = trimmed.toLowerCase() === 'skip' ? null : trimmed.slice(0, 50)
+        setUserName(name)
+        const ack = name ? `nice to meet you, ${name}!` : 'all good!'
+        setOnboardingMessages((prev) => [
+          ...prev,
+          userMsg,
+          { role: 'assistant', content: `${ack}\n${jessConfig.onboardingAskIdentity}` },
+        ])
+        setOnboardingStep('askIdentity')
+        return
+      }
+
+      // askIdentity — captured for the intro but never used for personalization
+      setOnboardingMessages((prev) => [...prev, userMsg])
+      setMessages([{ role: 'assistant', content: jessConfig.greeting }])
+      setOnboardingStep('done')
+      return
+    }
+
     if (!started) setStarted(true)
 
     const userMessage = { role: 'user', content: trimmed }
@@ -35,7 +64,7 @@ export default function Home() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed, history }),
+        body: JSON.stringify({ message: trimmed, history, name: userName }),
       })
       const data = await res.json()
       setMessages((prev) => [
@@ -206,7 +235,7 @@ export default function Home() {
             flexDirection: 'column',
             gap: 14,
           }}>
-            {messages.map((msg, i) => {
+            {[...onboardingMessages, ...messages].map((msg, i) => {
               const lines = msg.content
                 .split('\n')
                 .map(l => l.trim())
@@ -274,7 +303,7 @@ export default function Home() {
           </div>
 
           {/* Suggestion chips */}
-          {!started && (
+          {onboardingStep === 'done' && !started && (
             <div style={{
               padding: '0 28px 16px',
               display: 'flex', gap: 8, flexWrap: 'wrap',
@@ -301,7 +330,11 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything about Jess..."
+              placeholder={
+                onboardingStep === 'askName' ? "what should i call you?"
+                : onboardingStep === 'askIdentity' ? "how do you identify? (optional)"
+                : "Ask anything about Jess..."
+              }
               maxLength={500}
               disabled={isLoading}
               autoFocus

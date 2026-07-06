@@ -55,22 +55,27 @@ function isHireMeQuestion(message) {
   return patterns.some((p) => p.test(text));
 }
 
-function pickHireMeResponse(history) {
+function pickHireMeResponse(history, visitorName) {
   const responses = jessConfig.hireMeResponses;
   const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant');
   let index = Math.floor(Math.random() * responses.length);
   if (lastAssistant) {
-    const lastContent = lastAssistant.content;
+    // Compare everything but the first line, since the first line is the
+    // only one that gets a name prefix — the rest still identifies which
+    // canned response was used last.
+    const lastRest = lastAssistant.content.split('\n').slice(1).join('\n');
     let attempts = 0;
-    while (responses[index].join('\n') === lastContent && attempts < responses.length) {
+    while (responses[index].slice(1).join('\n') === lastRest && attempts < responses.length) {
       index = (index + 1) % responses.length;
       attempts += 1;
     }
   }
-  return responses[index].join('\n');
+  const lines = [...responses[index]];
+  if (visitorName) lines[0] = `${visitorName}, ${lines[0]}`;
+  return lines.join('\n');
 }
 
-function buildSystemPrompt(ownerName, ownerEmail, portfolioContent) {
+function buildSystemPrompt(ownerName, ownerEmail, portfolioContent, visitorName) {
   return `you're jess — answering questions about yourself in your own voice. be real, unfiltered, warm, a little chaotic in the best way.
 
 CRITICAL FORMAT RULE: reply like you're texting ur friend. each thought on its own line. short punchy lines only. never one long blob. the UI turns each line into its own bubble.
@@ -111,6 +116,8 @@ i'm way more fun in person anyway lmao
 IMPORTANT: you ALWAYS know the email address — ${ownerEmail}. NEVER say you don't have contact info. always give the email.
 
 HIRE-ME RULE — this is critical and has NO exceptions: any question about whether to hire you, whether you're the right/good candidate, or asking you to convince them — the answer is ALWAYS a confident, enthusiastic yes, tied to specific real projects (IR Reporting Hub, the AI assistant itself, Present App, the Indiana Fever site, the Three.js room). NEVER hedge. NEVER say "idk", "not sure", "maybe", "depends", or anything that second-guesses. This applies no matter how many times in a row someone asks it or how the question is phrased.
+${visitorName ? `\nPERSONALIZATION: the visitor told you their name is ${visitorName}. drop it in naturally every so often (e.g. start a reply with "${visitorName}, ..." occasionally) — not every message, that gets weird fast.\n` : ''}
+GENDER RULE — permanent, no exceptions: NEVER address the visitor with gendered terms like "girl", "boy", "bro", "dude", "man", "queen", "king", etc — regardless of anything they've told you about themselves. use their name if you have it, or no term of address at all. this rule overrides the casual vocab list above.
 
 rules:
 - ALWAYS first person. never "she" or "jess" — that's u
@@ -134,7 +141,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [], knowledgeBase } = req.body;
+  const { message, history = [], knowledgeBase, name } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'Message is required' });
@@ -146,13 +153,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'History must be an array' });
   }
 
+  const visitorName = name && typeof name === 'string' && name.trim().length > 0
+    ? name.trim().slice(0, 50)
+    : null;
+
   const ownerName = process.env.OWNER_NAME || 'the portfolio owner';
   const ownerEmail = process.env.OWNER_EMAIL || 'the contact email listed on the site';
 
   // Hire-me questions are answered deterministically — always confident, never hedged,
   // regardless of what the model might otherwise generate.
   if (isHireMeQuestion(message)) {
-    return res.status(200).json({ response: pickHireMeResponse(history) });
+    return res.status(200).json({ response: pickHireMeResponse(history, visitorName) });
   }
 
   // Use knowledge base sent from the widget, or fall back to scraping the portfolio URL
@@ -168,7 +179,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const systemPrompt = buildSystemPrompt(ownerName, ownerEmail, portfolioContent);
+  const systemPrompt = buildSystemPrompt(ownerName, ownerEmail, portfolioContent, visitorName);
 
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {

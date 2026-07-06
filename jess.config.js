@@ -17,6 +17,17 @@ const jessConfig = {
   greeting: "hey! think of me as the AI ver. of jess lol\nask me anything — projects, skills, what she's been up to, whatever",
 
   // ----------------------------------------------------------
+  // ONBOARDING
+  // Asked once at the start of every session, before the
+  // greeting. Name is used to personalize replies (e.g. "hey
+  // Sarah!"). Identity is asked but NEVER used to pick gendered
+  // words like "girl"/"boy" — that's intentional, see README.
+  // Visitors can type "skip" to skip either question.
+  // ----------------------------------------------------------
+  onboardingAskName: "hey! before we jump in — what should i call you?\n(or type \"skip\" if you'd rather not say)",
+  onboardingAskIdentity: "and just curious — how do you identify?\ntotally optional, type \"skip\" to skip",
+
+  // ----------------------------------------------------------
   // VOCAB
   // Words and phrases the AI uses naturally.
   // Add or remove anything from this list.

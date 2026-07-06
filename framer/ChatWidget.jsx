@@ -43,22 +43,62 @@ const C = {
 
 const GREETING = `hey! think of me as the AI ver. of ${YOUR_NAME} lol\nask me anything — projects, skills, what she's been up to, whatever`
 
+// Asked once per session, before the greeting. Name is used to personalize
+// replies (e.g. "hey Sarah!"). Identity is asked but NEVER used to pick
+// gendered words like "girl"/"boy" — the backend has a hard rule against
+// that regardless of what's said here. Visitors can type "skip" either time.
+const ASK_NAME_MSG     = `hey! before we jump in — what should i call you?\n(or type "skip" if you'd rather not say)`
+const ASK_IDENTITY_MSG = `and just curious — how do you identify?\ntotally optional, type "skip" to skip`
+
+function toLines(text) {
+  return text.split("\n").map(l => l.trim()).filter(Boolean)
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen]     = useState(false)
   const [input, setInput]       = useState("")
   const [isLoading, setLoading] = useState(false)
-  const [messages, setMessages] = useState([
-    { role: "assistant", lines: GREETING.split("\n").map(l => l.trim()).filter(Boolean) },
+
+  const [onboardingStep, setOnboardingStep] = useState("askName") // "askName" | "askIdentity" | "done"
+  const [onboardingMessages, setOnboardingMessages] = useState([
+    { role: "assistant", lines: toLines(ASK_NAME_MSG) },
   ])
+  const [userName, setUserName] = useState(null)
+  const [messages, setMessages] = useState([])
+
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages, isLoading])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages, onboardingMessages, isLoading])
   useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 120) }, [isOpen])
 
   async function send() {
     const text = input.trim()
     if (!text || isLoading) return
+
+    if (onboardingStep !== "done") {
+      const userMsg = { role: "user", lines: [text] }
+      setInput("")
+
+      if (onboardingStep === "askName") {
+        const nm = text.toLowerCase() === "skip" ? null : text.slice(0, 50)
+        setUserName(nm)
+        const ack = nm ? `nice to meet you, ${nm}!` : "all good!"
+        setOnboardingMessages(prev => [
+          ...prev,
+          userMsg,
+          { role: "assistant", lines: toLines(`${ack}\n${ASK_IDENTITY_MSG}`) },
+        ])
+        setOnboardingStep("askIdentity")
+        return
+      }
+
+      // askIdentity — captured for the intro but never used for personalization
+      setOnboardingMessages(prev => [...prev, userMsg])
+      setMessages([{ role: "assistant", lines: toLines(GREETING) }])
+      setOnboardingStep("done")
+      return
+    }
 
     const next = [...messages, { role: "user", lines: [text] }]
     setMessages(next)
@@ -74,7 +114,7 @@ export default function ChatWidget() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: text, history, name: userName }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "failed")
@@ -130,7 +170,7 @@ export default function ChatWidget() {
 
           {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 6 }}>
-            {messages.map((msg, i) =>
+            {[...onboardingMessages, ...messages].map((msg, i) =>
               msg.role === "user" ? (
                 <div key={i} style={{ display: "flex", justifyContent: "flex-end" }}>
                   <div style={{ background: C.userBubble, color: C.userText, borderRadius: "16px 16px 4px 16px", padding: "9px 14px", fontSize: 13.5, lineHeight: 1.5, maxWidth: "82%" }}>
@@ -160,7 +200,11 @@ export default function ChatWidget() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={onKey}
-              placeholder={`Ask anything about ${YOUR_NAME}...`}
+              placeholder={
+                onboardingStep === "askName" ? "what should i call you?"
+                : onboardingStep === "askIdentity" ? "how do you identify? (optional)"
+                : `Ask anything about ${YOUR_NAME}...`
+              }
               maxLength={500}
               disabled={isLoading}
               style={{ flex: 1, border: `1px solid ${C.inputBorder}`, borderRadius: 12, padding: "8px 12px", fontSize: 13.5, fontFamily: "inherit", color: "#6B4030", background: "rgba(255,255,255,0.6)", outline: "none" }}
