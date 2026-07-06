@@ -28,6 +28,21 @@ const jessConfig = {
   onboardingAskIdentity: "and just curious — how do you identify?\ntotally optional, type \"skip\" to skip",
 
   // ----------------------------------------------------------
+  // PROJECT LINKS
+  // Map a project's name (as it appears in your portfolio
+  // content) to its live URL — a case study page, live site,
+  // repo, whatever. When the AI mentions a project in this
+  // list, it'll drop the link in on its own line so visitors
+  // can click straight through to it.
+  // Leave this empty ({}) if you don't have individual project
+  // pages — everything else keeps working fine without it.
+  // ----------------------------------------------------------
+  projectLinks: {
+    // "Indiana Fever": "https://indiana-fever.framer.website/",
+    // "Present App": "https://your-app-url.com",
+  },
+
+  // ----------------------------------------------------------
   // VOCAB
   // Words and phrases the AI uses naturally.
   // Add or remove anything from this list.

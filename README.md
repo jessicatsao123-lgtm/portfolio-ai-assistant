@@ -73,12 +73,14 @@ That's it. The widget reads from your portfolio site automatically.
 Edit `jess.config.js` at the root of the repo — no code knowledge needed, just edit the text and push to GitHub. Vercel redeploys automatically.
 
 ```js
-modeNames: {
-  jess: 'Jess Mode',      // casual tab label — rename to whatever
-  formal: 'Professional', // formal tab label
-},
-
 greeting: "hey! ...",     // opening message (\n = separate bubble)
+
+onboardingAskName: "what should i call you?",       // asked once per session
+onboardingAskIdentity: "how do you identify?",      // asked but NEVER used to pick gendered words
+
+projectLinks: {            // project name -> live url; AI links to it when it comes up
+  "Indiana Fever": "https://indiana-fever.framer.website/",
+},
 
 vocab: ['lol', 'lowkey', ...],    // slang the AI uses naturally
 
@@ -91,6 +93,12 @@ contactResponse: [         // reply when someone asks how to reach you
 suggestions: [             // quick-tap chips before first message
   'what have you been working on?',
 ],
+
+// Plus several "hard rule" response sets that rotate and never repeat
+// back-to-back: hireMeResponses, negativeDeflectResponses /
+// negativePersistResponses, promptLeakResponses, boundaryResponses,
+// noCommitmentResponses, hostilityResponses. Edit the wording of any
+// of these the same way — see pages/api/chat.js for how they're used.
 ```
 
 ---

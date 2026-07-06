@@ -1,6 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import jessConfig from '../jess.config.js'
 
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g
+
+// Renders a line of text with any http(s) urls turned into real clickable
+// links, so a project mention with its url (see jessConfig.projectLinks)
+// is clickable straight through to the case study.
+function renderLine(line) {
+  return line.split(URL_PATTERN).map((part, i) =>
+    part.startsWith('http://') || part.startsWith('https://')
+      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>{part}</a>
+      : part
+  )
+}
+
 export default function Home() {
   // Onboarding runs once at the start of every session: ask name, then
   // identity (unused for personalization — see jess.config.js). Only
@@ -272,7 +285,7 @@ export default function Home() {
                         boxShadow: '0 2px 10px rgba(210,180,165,0.10), inset 0 1px 1px rgba(255,255,255,1)',
                       }),
                     }}>
-                      {line}
+                      {renderLine(line)}
                     </div>
                   ))}
                 </div>

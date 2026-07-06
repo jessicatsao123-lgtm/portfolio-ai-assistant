@@ -54,6 +54,19 @@ function toLines(text) {
   return text.split("\n").map(l => l.trim()).filter(Boolean)
 }
 
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g
+
+// Renders a line of text with any http(s) urls turned into real clickable
+// links, so a project mention with its url (see jessConfig.projectLinks)
+// is clickable straight through to the case study.
+function renderLine(line) {
+  return line.split(URL_PATTERN).map((part, i) =>
+    part.startsWith("http://") || part.startsWith("https://")
+      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>{part}</a>
+      : part
+  )
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen]     = useState(false)
   const [input, setInput]       = useState("")
@@ -179,7 +192,7 @@ export default function ChatWidget() {
                 </div>
               ) : (
                 <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                  {msg.lines.map((line, j) => <div key={j} style={bubbleStyle(j)}>{line}</div>)}
+                  {msg.lines.map((line, j) => <div key={j} style={bubbleStyle(j)}>{renderLine(line)}</div>)}
                 </div>
               )
             )}
