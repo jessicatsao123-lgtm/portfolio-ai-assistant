@@ -17,6 +17,19 @@ const jessConfig = {
   greeting: "hey! think of me as the AI ver. of jess lol\nask me anything — projects, skills, what she's been up to, whatever",
 
   // ----------------------------------------------------------
+  // LATEST PROJECT
+  // The single most recent project — used whenever someone asks
+  // "what's your latest project" / "what have you been working
+  // on" / similar recency questions. This is a HARD FACT the AI
+  // always uses, instead of guessing at recency from the order
+  // things happen to appear in the scraped portfolio text (which
+  // reflects a curated display order, not necessarily true
+  // chronological order). Update this the moment something newer
+  // ships — it's the only thing you need to touch.
+  // ----------------------------------------------------------
+  latestProject: 'Biggest Fan',
+
+  // ----------------------------------------------------------
   // ONBOARDING
   // Asked once at the start of every session, before the
   // greeting. Name is used to personalize replies (e.g. "hey
