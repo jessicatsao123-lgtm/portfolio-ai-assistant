@@ -25,7 +25,11 @@ const jessConfig = {
   // Visitors can type "skip" to skip either question.
   // ----------------------------------------------------------
   onboardingAskName: "hey! before we jump in — what should i call you?\n(or type \"skip\" if you'd rather not say)",
-  onboardingAskIdentity: "and just curious — how do you identify?\ntotally optional, type \"skip\" to skip",
+  onboardingAskIdentity: "and just curious — how do you identify?\ntap one below, or skip",
+
+  // Shown as clickable chips for the identity question above. Add/remove
+  // as many as you want — "Skip" is always added automatically.
+  onboardingIdentityOptions: ['Woman', 'Man', 'Non-binary'],
 
   // ----------------------------------------------------------
   // PROJECT LINKS
@@ -125,7 +129,7 @@ const jessConfig = {
       "that's a yes from me every single time",
     ],
     [
-      "yes!! and i'll say it again as many times as u ask lol",
+      "yes!! and that answer's not changing no matter how many times u ask lol",
       "present app, the indiana fever site, the mondi ir hub — i ship real things, not just ideas",
       "that's why",
     ],

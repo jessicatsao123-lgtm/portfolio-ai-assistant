@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import jessConfig from '../jess.config.js'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g
+const SESSION_NAME_KEY = 'jess-user-name'
+const SESSION_DONE_KEY = 'jess-onboarding-done'
 
 // Renders a line of text with any http(s) urls turned into real clickable
 // links, so a project mention with its url (see jessConfig.projectLinks)
@@ -15,9 +17,11 @@ function renderLine(line) {
 }
 
 export default function Home() {
-  // Onboarding runs once at the start of every session: ask name, then
-  // identity (unused for personalization — see jess.config.js). Only
-  // `userName` is ever sent to the API or used to personalize replies.
+  // Onboarding runs once per browser session: ask name, then identity
+  // (unused for personalization — see jess.config.js). Only `userName` is
+  // ever sent to the API or used to personalize replies. Persisted to
+  // sessionStorage so minimizing/reopening the widget (or reloading the
+  // page) within the same browser session doesn't ask again.
   const [onboardingStep, setOnboardingStep] = useState('askName') // 'askName' | 'askIdentity' | 'done'
   const [onboardingMessages, setOnboardingMessages] = useState([
     { role: 'assistant', content: jessConfig.onboardingAskName },
@@ -30,6 +34,14 @@ export default function Home() {
   const [started, setStarted] = useState(false)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (window.sessionStorage.getItem(SESSION_DONE_KEY) !== '1') return
+    setUserName(window.sessionStorage.getItem(SESSION_NAME_KEY) || null)
+    setOnboardingMessages([])
+    setMessages([{ role: 'assistant', content: jessConfig.greeting }])
+    setOnboardingStep('done')
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -60,6 +72,8 @@ export default function Home() {
       setOnboardingMessages((prev) => [...prev, userMsg])
       setMessages([{ role: 'assistant', content: jessConfig.greeting }])
       setOnboardingStep('done')
+      window.sessionStorage.setItem(SESSION_DONE_KEY, '1')
+      if (userName) window.sessionStorage.setItem(SESSION_NAME_KEY, userName)
       return
     }
 
@@ -106,9 +120,10 @@ export default function Home() {
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
+        html, body {
+          height: 100%;
           background: linear-gradient(135deg, #FFFFFF 0%, #FFFCFA 100%);
-          min-height: 100vh;
+          overflow: hidden;
         }
 
         @keyframes fadeUp {
@@ -187,31 +202,28 @@ export default function Home() {
         `,
       }} />
 
-      {/* Page layout */}
+      {/* Full-height chat, no outer chrome — this page is designed to fill
+          whatever iframe/panel it's embedded in without needing a page-level
+          scroll to reach the input. */}
       <div style={{
         position: 'relative', zIndex: 1,
-        minHeight: '100vh',
+        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '32px 16px',
         fontFamily: "'Satoshi', system-ui, -apple-system, sans-serif",
       }}>
 
-        {/* Status pill */}
+        {/* Header */}
         <div style={{
-          marginBottom: 24,
-          display: 'inline-flex',
+          flexShrink: 0,
+          padding: '16px 24px',
+          display: 'flex',
           alignItems: 'center',
           gap: 8,
-          background: 'rgba(255,255,255,0.72)',
-          border: '1px solid rgba(255,255,255,0.95)',
+          background: 'rgba(255,255,255,0.55)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
-          borderRadius: 999,
-          padding: '7px 18px',
-          boxShadow: 'inset 0 1px 1px rgba(255,255,255,1), 0 4px 16px rgba(210,180,165,0.12)',
+          borderBottom: '1px solid rgba(210,180,165,0.18)',
         }}>
           <div style={{
             width: 7, height: 7, borderRadius: '50%',
@@ -223,167 +235,157 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Glass chat card */}
+        {/* Messages */}
         <div style={{
-          width: '100%',
-          maxWidth: 560,
-          height: 580,
-          borderRadius: 30,
-          background: 'rgba(255,255,255,0.62)',
-          backdropFilter: 'blur(20px) saturate(125%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(125%)',
-          border: '1px solid rgba(255,255,255,0.95)',
-          boxShadow: '0 16px 44px rgba(210,180,165,0.13), inset 0 1px 1px rgba(255,255,255,1)',
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: '20px 24px 16px',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
+          gap: 14,
         }}>
+          {[...onboardingMessages, ...messages].map((msg, i) => {
+            const lines = msg.content
+              .split('\n')
+              .map(l => l.trim())
+              .filter(l => l.length > 0)
 
-          {/* Messages */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '24px 28px 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-          }}>
-            {[...onboardingMessages, ...messages].map((msg, i) => {
-              const lines = msg.content
-                .split('\n')
-                .map(l => l.trim())
-                .filter(l => l.length > 0)
-
-              return (
-                <div key={i} style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                  gap: 4,
-                }}>
-                  {lines.map((line, j) => (
-                    <div key={j} className="msg-in" style={{
-                      animationDelay: `${j * 80}ms`,
-                      maxWidth: '78%',
-                      padding: '10px 15px',
-                      borderRadius: msg.role === 'user'
-                        ? '18px 18px 5px 18px'
-                        : j === 0
-                          ? '18px 18px 18px 5px'
-                          : '5px 18px 18px 5px',
-                      fontSize: 14,
-                      lineHeight: 1.5,
-                      ...(msg.role === 'user' ? {
-                        background: 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
-                        color: '#6B4030',
-                        border: '1px solid rgba(255,255,255,0.95)',
-                        boxShadow: '0 4px 16px rgba(210,160,130,0.14), inset 0 1px 1px rgba(255,255,255,1)',
-                      } : {
-                        background: 'rgba(255,255,255,0.72)',
-                        border: '1px solid rgba(255,255,255,0.95)',
-                        color: '#6B4030',
-                        boxShadow: '0 2px 10px rgba(210,180,165,0.10), inset 0 1px 1px rgba(255,255,255,1)',
-                      }),
-                    }}>
-                      {renderLine(line)}
-                    </div>
-                  ))}
-                </div>
-              )
-            })}
-
-            {isLoading && (
-              <div className="msg-in" style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div style={{
-                  background: 'rgba(255,255,255,0.72)',
-                  border: '1px solid rgba(255,255,255,0.95)',
-                  borderRadius: '18px 18px 18px 5px',
-                  padding: '14px 18px',
-                  display: 'flex', gap: 5, alignItems: 'center',
-                  boxShadow: '0 2px 10px rgba(210,180,165,0.10)',
-                }}>
-                  {[0, 1, 2].map((j) => (
-                    <div key={j} style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: '#C9A898',
-                      animation: `bounce 1.2s ease-in-out ${j * 0.2}s infinite`,
-                    }} />
-                  ))}
-                </div>
+            return (
+              <div key={i} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                gap: 4,
+              }}>
+                {lines.map((line, j) => (
+                  <div key={j} className="msg-in" style={{
+                    animationDelay: `${j * 80}ms`,
+                    maxWidth: '78%',
+                    padding: '10px 15px',
+                    borderRadius: msg.role === 'user'
+                      ? '18px 18px 5px 18px'
+                      : j === 0
+                        ? '18px 18px 18px 5px'
+                        : '5px 18px 18px 5px',
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    ...(msg.role === 'user' ? {
+                      background: 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
+                      color: '#6B4030',
+                      border: '1px solid rgba(255,255,255,0.95)',
+                      boxShadow: '0 4px 16px rgba(210,160,130,0.14), inset 0 1px 1px rgba(255,255,255,1)',
+                    } : {
+                      background: 'rgba(255,255,255,0.72)',
+                      border: '1px solid rgba(255,255,255,0.95)',
+                      color: '#6B4030',
+                      boxShadow: '0 2px 10px rgba(210,180,165,0.10), inset 0 1px 1px rgba(255,255,255,1)',
+                    }),
+                  }}>
+                    {renderLine(line)}
+                  </div>
+                ))}
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+            )
+          })}
 
-          {/* Suggestion chips */}
-          {onboardingStep === 'done' && !started && (
-            <div style={{
-              padding: '0 28px 16px',
-              display: 'flex', gap: 8, flexWrap: 'wrap',
-            }}>
-              {jessConfig.suggestions.map((s) => (
-                <button key={s} className="chip" onClick={() => sendMessage(s)}>{s}</button>
-              ))}
+          {isLoading && (
+            <div className="msg-in" style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{
+                background: 'rgba(255,255,255,0.72)',
+                border: '1px solid rgba(255,255,255,0.95)',
+                borderRadius: '18px 18px 18px 5px',
+                padding: '14px 18px',
+                display: 'flex', gap: 5, alignItems: 'center',
+                boxShadow: '0 2px 10px rgba(210,180,165,0.10)',
+              }}>
+                {[0, 1, 2].map((j) => (
+                  <div key={j} style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: '#C9A898',
+                    animation: `bounce 1.2s ease-in-out ${j * 0.2}s infinite`,
+                  }} />
+                ))}
+              </div>
             </div>
           )}
-
-          {/* Divider */}
-          <div style={{ height: 1, background: 'rgba(210,180,165,0.18)', margin: '0 28px' }} />
-
-          {/* Input row */}
-          <div style={{
-            padding: '16px 28px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}>
-            <input
-              ref={inputRef}
-              className="input-field"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                onboardingStep === 'askName' ? "what should i call you?"
-                : onboardingStep === 'askIdentity' ? "how do you identify? (optional)"
-                : "Ask anything about Jess..."
-              }
-              maxLength={500}
-              disabled={isLoading}
-              autoFocus
-            />
-            <button
-              className="send-btn"
-              onClick={() => sendMessage()}
-              disabled={isLoading || !input.trim()}
-              style={{
-                background: isLoading || !input.trim()
-                  ? 'rgba(255,255,255,0.72)'
-                  : 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
-                color: isLoading || !input.trim() ? '#C9A898' : '#8F5E48',
-                cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
-                border: '1px solid rgba(255,255,255,0.95)',
-                boxShadow: !isLoading && input.trim()
-                  ? '0 4px 14px rgba(210,160,130,0.20), inset 0 1px 1px rgba(255,255,255,1)'
-                  : 'inset 0 1px 1px rgba(255,255,255,1)',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <div ref={messagesEndRef} />
         </div>
 
-        <p style={{
-          marginTop: 18,
-          color: '#C9A898',
-          fontSize: 11.5,
-          letterSpacing: '0.02em',
+        {/* Identity options (onboarding) */}
+        {onboardingStep === 'askIdentity' && (
+          <div style={{
+            flexShrink: 0,
+            padding: '0 24px 16px',
+            display: 'flex', gap: 8, flexWrap: 'wrap',
+          }}>
+            {[...jessConfig.onboardingIdentityOptions, 'Prefer not to say'].map((opt) => (
+              <button key={opt} className="chip" onClick={() => sendMessage(opt)}>{opt}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Suggestion chips */}
+        {onboardingStep === 'done' && !started && (
+          <div style={{
+            flexShrink: 0,
+            padding: '0 24px 16px',
+            display: 'flex', gap: 8, flexWrap: 'wrap',
+          }}>
+            {jessConfig.suggestions.map((s) => (
+              <button key={s} className="chip" onClick={() => sendMessage(s)}>{s}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Divider */}
+        <div style={{ flexShrink: 0, height: 1, background: 'rgba(210,180,165,0.18)', margin: '0 24px' }} />
+
+        {/* Input row */}
+        <div style={{
+          flexShrink: 0,
+          padding: '16px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
         }}>
-          Powered by Groq — answers based on Jess's knowledge base
-        </p>
+          <input
+            ref={inputRef}
+            className="input-field"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              onboardingStep === 'askName' ? "what should i call you?"
+              : onboardingStep === 'askIdentity' ? "or type your own..."
+              : "Ask anything about Jess..."
+            }
+            maxLength={500}
+            disabled={isLoading}
+            autoFocus
+          />
+          <button
+            className="send-btn"
+            onClick={() => sendMessage()}
+            disabled={isLoading || !input.trim()}
+            style={{
+              background: isLoading || !input.trim()
+                ? 'rgba(255,255,255,0.72)'
+                : 'linear-gradient(145deg, #FFF3E6, #FFDBCE)',
+              color: isLoading || !input.trim() ? '#C9A898' : '#8F5E48',
+              cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
+              border: '1px solid rgba(255,255,255,0.95)',
+              boxShadow: !isLoading && input.trim()
+                ? '0 4px 14px rgba(210,160,130,0.20), inset 0 1px 1px rgba(255,255,255,1)'
+                : 'inset 0 1px 1px rgba(255,255,255,1)',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </>
   )
