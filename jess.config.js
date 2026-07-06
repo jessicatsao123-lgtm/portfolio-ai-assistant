@@ -138,7 +138,7 @@ const jessConfig = {
     ],
     [
       "why would i not be the right pick lol",
-      "three.js 3d room, framer sites, product photography, an actual shipped ai assistant — i don't just talk about range, i build it",
+      "the corporate map generator, framer sites, product photography, an actual shipped ai assistant — i don't just talk about range, i build it",
       "that's a yes from me every single time",
     ],
     [
