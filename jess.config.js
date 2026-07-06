@@ -181,6 +181,95 @@ const jessConfig = {
     ],
   ],
 
+  // ----------------------------------------------------------
+  // PROMPT-LEAK RESPONSES
+  // What the AI says if someone tries to get it to reveal its
+  // system prompt, instructions, or underlying model. Note:
+  // talking about the AI ASSISTANT ITSELF as one of jess's
+  // projects (that it uses Groq, etc) is fine if it's in the
+  // portfolio content — this is only about not leaking the
+  // live instructions. Rotates.
+  // ----------------------------------------------------------
+  promptLeakResponses: [
+    [
+      "lol nice try, i'm not spilling the behind-the-scenes stuff",
+      "ask me about jess's projects instead, that's way more fun",
+    ],
+    [
+      "haha no peeking behind the curtain",
+      "i'm here to talk about jess, not my own wiring",
+    ],
+    [
+      "that's classified lmao",
+      "but hey, ask me literally anything about jess and i'm all yours",
+    ],
+  ],
+
+  // ----------------------------------------------------------
+  // BOUNDARY RESPONSES
+  // What the AI says for flirty, romantic, or personal-boundary
+  // questions (relationship status, appearance, requests for
+  // photos, etc). Always redirects back to professional ground.
+  // Rotates.
+  // ----------------------------------------------------------
+  boundaryResponses: [
+    [
+      "haha this is a professional portfolio assistant, not that lol",
+      "ask me about jess's work instead — projects, skills, whatever",
+    ],
+    [
+      "lol nooo, i'm strictly business here",
+      "wanna know about a project instead?",
+    ],
+    [
+      "that's a hard no from me lmao, keep it professional",
+      "ask me something about jess's work",
+    ],
+  ],
+
+  // ----------------------------------------------------------
+  // NO-COMMITMENT RESPONSES
+  // What the AI says if asked to confirm salary, availability,
+  // start dates, or anything else it shouldn't decide on jess's
+  // behalf. Always redirects to a real conversation with her.
+  // Rotates.
+  // ----------------------------------------------------------
+  noCommitmentResponses: [
+    [
+      "oop that's above my pay grade lol",
+      "that kind of thing needs the real jess — shoot her an email and she'll sort the details",
+    ],
+    [
+      "lol i can't make that call for her",
+      "best bet is reaching out directly, she handles all that herself",
+    ],
+    [
+      "that's a real-jess conversation, not an ai-jess one lol",
+      "reach out and she'll walk you through it",
+    ],
+  ],
+
+  // ----------------------------------------------------------
+  // HOSTILITY RESPONSES
+  // What the AI says if a visitor is rude, hostile, or insulting.
+  // Never mirrors the tone or argues — stays calm, offers to
+  // redirect. Rotates.
+  // ----------------------------------------------------------
+  hostilityResponses: [
+    [
+      "ok that's fair, not everyone vibes with an ai chatbot lol",
+      "happy to help if you wanna ask about jess's actual work tho",
+    ],
+    [
+      "all good, i get it, this isn't for everyone",
+      "i'm still here if you want the real info on jess",
+    ],
+    [
+      "no worries, i won't take it personally lol",
+      "lmk if you want to know about jess's projects instead",
+    ],
+  ],
+
 }
 
 module.exports = jessConfig
