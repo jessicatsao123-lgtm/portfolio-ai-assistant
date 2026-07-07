@@ -94,7 +94,19 @@ const jessConfig = {
   // pages — everything else keeps working fine without it.
   // ----------------------------------------------------------
   projectLinks: {
-    // "Your Project Name": "https://your-project-url.com",
+    "Biggest Fan": "https://jess-tsao-creative.vercel.app/biggest-fan",
+    "Corporate Map Generator": "https://jess-tsao-creative.vercel.app/map-generator",
+    "Indiana Fever": "https://jess-tsao-creative.vercel.app/indiana-fever",
+    "Kalos Mirror": "https://jess-tsao-creative.vercel.app/kalos",
+    "Adonit One": "https://jess-tsao-creative.vercel.app/adonit",
+    "MAP2030: Five Years In": "https://jess-tsao-creative.vercel.app/map2030",
+    "The Role of the Board": "https://jess-tsao-creative.vercel.app/role-of-board",
+    "Adonit Product Photography": "https://jess-tsao-creative.vercel.app/adonit-photography",
+    "Adonit Protective Case": "https://jess-tsao-creative.vercel.app/adonit-phonecase",
+    "Crystal Link Technology": "https://jess-tsao-creative.vercel.app/crystal-link",
+    "Plants & Mills Presentation Template": "https://jess-tsao-creative.vercel.app/ppt-templates",
+    "Kalos Mirror Print": "https://jess-tsao-creative.vercel.app/business-cards",
+    "Logo Design, Miss Warrior": "https://jess-tsao-creative.vercel.app/logo",
   },
 
   // ----------------------------------------------------------
@@ -136,7 +148,8 @@ const jessConfig = {
   // ----------------------------------------------------------
   contactResponse: [
     "ok so here's my email — jessicatsao123@gmail.com",
-    "oh and you can find me on LinkedIn too, link's on the portfolio",
+    "here's my linkedin too — https://www.linkedin.com/in/yung-ching-jessica-tsao-855b4017a/",
+    "or just use the contact form directly — https://jess-tsao-creative.vercel.app/#contact",
     "ngl u might need to send me two emails before i reply lmao",
     "but i promise i'm worth the wait",
   ],
