@@ -1,11 +1,11 @@
 const jessConfig = require('../../jess.config.js');
 const PORTFOLIO_URL = process.env.PORTFOLIO_URL || 'https://jess-tsao-creative.vercel.app/';
 const CACHE_TTL = 60 * 60 * 1000;
-const MAX_CONTENT_LENGTH = 90000; // overall safety cap across all pages combined
+const DEFAULT_PAGE_MAX_CHARS = 2000;
 
 let portfolioCache = { content: null, fetchedAt: 0 };
 
-function stripHtml(html) {
+function stripHtml(html, maxChars) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -19,19 +19,19 @@ function stripHtml(html) {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 12000); // per-page safety cap
+    .slice(0, maxChars);
 }
 
 function pageUrl(path) {
   return PORTFOLIO_URL.replace(/\/$/, '') + path;
 }
 
-async function fetchPage(path) {
+async function fetchPage(path, maxChars) {
   const res = await fetch(pageUrl(path), {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PortfolioBot/1.0)' },
   });
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
-  return stripHtml(await res.text());
+  return stripHtml(await res.text(), maxChars);
 }
 
 async function getPortfolioContent() {
@@ -42,16 +42,18 @@ async function getPortfolioContent() {
 
   const pages = jessConfig.portfolioPages && jessConfig.portfolioPages.length > 0
     ? jessConfig.portfolioPages
-    : ['/'];
+    : [{ path: '/', maxChars: DEFAULT_PAGE_MAX_CHARS }];
 
-  const results = await Promise.allSettled(pages.map((path) => fetchPage(path)));
+  const results = await Promise.allSettled(
+    pages.map((p) => fetchPage(p.path, p.maxChars || DEFAULT_PAGE_MAX_CHARS))
+  );
 
   const sections = [];
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {
-      sections.push(`--- page: ${pages[i]} ---\n${result.value}`);
+      sections.push(`--- page: ${pages[i].path} ---\n${result.value}`);
     } else {
-      console.error('Failed to fetch portfolio page:', pages[i], result.reason?.message);
+      console.error('Failed to fetch portfolio page:', pages[i].path, result.reason?.message);
     }
   });
 
@@ -59,7 +61,7 @@ async function getPortfolioContent() {
     throw new Error('Failed to fetch any portfolio pages');
   }
 
-  const content = sections.join('\n\n').slice(0, MAX_CONTENT_LENGTH);
+  const content = sections.join('\n\n');
   portfolioCache = { content, fetchedAt: now };
   return content;
 }
@@ -412,7 +414,7 @@ export default async function handler(req, res) {
         max_tokens: 500,
         messages: [
           { role: 'system', content: systemPrompt },
-          ...history.slice(-6),
+          ...history.slice(-4), // keep this small — the free Groq tier has a tight per-request token budget
           { role: 'user', content: message.trim() },
         ],
       }),

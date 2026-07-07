@@ -51,25 +51,36 @@ const jessConfig = {
   // needs to list every page you want it to actually know about —
   // it does NOT crawl/discover pages on its own. Add a new path
   // here whenever you add a new page or case study.
+  //
+  // maxChars caps how much of each page gets included. This
+  // matters a lot: the free Groq tier this runs on has a hard
+  // 6000-token-per-request budget covering the ENTIRE request
+  // (rules, portfolio content, conversation history, and the
+  // reserved reply length combined) — go over it and every
+  // message fails with a "request too large" error. Overview
+  // pages get more room since they carry the most-asked-about
+  // info (skills, contact, what you do); case studies get just
+  // enough for a solid summary. If you add pages, keep the total
+  // roughly around what's here now — trimmed further below.
   // ----------------------------------------------------------
   portfolioPages: [
-    '/',
-    '/about',
-    '/work',
-    '/biggest-fan',
-    '/map-generator',
-    '/indiana-fever',
-    '/kalos',
-    '/adonit',
-    '/map2030',
-    '/role-of-board',
-    '/adonit-photography',
-    '/adonit-phonecase',
-    '/crystal-link',
-    '/ppt-templates',
-    '/business-cards',
-    '/logo',
-    '/ministry',
+    { path: '/', maxChars: 900 },
+    { path: '/about', maxChars: 900 },
+    { path: '/work', maxChars: 500 },
+    { path: '/biggest-fan', maxChars: 300 },
+    { path: '/map-generator', maxChars: 300 },
+    { path: '/indiana-fever', maxChars: 300 },
+    { path: '/kalos', maxChars: 300 },
+    { path: '/adonit', maxChars: 300 },
+    { path: '/map2030', maxChars: 300 },
+    { path: '/role-of-board', maxChars: 300 },
+    { path: '/adonit-photography', maxChars: 300 },
+    { path: '/adonit-phonecase', maxChars: 300 },
+    { path: '/crystal-link', maxChars: 300 },
+    { path: '/ppt-templates', maxChars: 300 },
+    { path: '/business-cards', maxChars: 300 },
+    { path: '/logo', maxChars: 300 },
+    { path: '/ministry', maxChars: 300 },
   ],
 
   // ----------------------------------------------------------
