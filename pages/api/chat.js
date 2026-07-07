@@ -1,6 +1,7 @@
 const jessConfig = require('../../jess.config.js');
 const PORTFOLIO_URL = process.env.PORTFOLIO_URL || 'https://jess-tsao-creative.vercel.app/';
 const CACHE_TTL = 60 * 60 * 1000;
+const MAX_CONTENT_LENGTH = 90000; // overall safety cap across all pages combined
 
 let portfolioCache = { content: null, fetchedAt: 0 };
 
@@ -18,7 +19,19 @@ function stripHtml(html) {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 12000);
+    .slice(0, 12000); // per-page safety cap
+}
+
+function pageUrl(path) {
+  return PORTFOLIO_URL.replace(/\/$/, '') + path;
+}
+
+async function fetchPage(path) {
+  const res = await fetch(pageUrl(path), {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PortfolioBot/1.0)' },
+  });
+  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  return stripHtml(await res.text());
 }
 
 async function getPortfolioContent() {
@@ -26,12 +39,27 @@ async function getPortfolioContent() {
   if (portfolioCache.content && now - portfolioCache.fetchedAt < CACHE_TTL) {
     return portfolioCache.content;
   }
-  const res = await fetch(PORTFOLIO_URL, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PortfolioBot/1.0)' },
+
+  const pages = jessConfig.portfolioPages && jessConfig.portfolioPages.length > 0
+    ? jessConfig.portfolioPages
+    : ['/'];
+
+  const results = await Promise.allSettled(pages.map((path) => fetchPage(path)));
+
+  const sections = [];
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      sections.push(`--- page: ${pages[i]} ---\n${result.value}`);
+    } else {
+      console.error('Failed to fetch portfolio page:', pages[i], result.reason?.message);
+    }
   });
-  if (!res.ok) throw new Error(`Failed to fetch portfolio: ${res.status}`);
-  const html = await res.text();
-  const content = stripHtml(html);
+
+  if (sections.length === 0) {
+    throw new Error('Failed to fetch any portfolio pages');
+  }
+
+  const content = sections.join('\n\n').slice(0, MAX_CONTENT_LENGTH);
   portfolioCache = { content, fetchedAt: now };
   return content;
 }

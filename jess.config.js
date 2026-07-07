@@ -45,6 +45,34 @@ const jessConfig = {
   onboardingIdentityOptions: ['Woman', 'Man', 'Non-binary'],
 
   // ----------------------------------------------------------
+  // PORTFOLIO PAGES
+  // Every page (relative to PORTFOLIO_URL) the AI reads as its
+  // knowledge base. It's a real multi-page site now, so this
+  // needs to list every page you want it to actually know about —
+  // it does NOT crawl/discover pages on its own. Add a new path
+  // here whenever you add a new page or case study.
+  // ----------------------------------------------------------
+  portfolioPages: [
+    '/',
+    '/about',
+    '/work',
+    '/biggest-fan',
+    '/map-generator',
+    '/indiana-fever',
+    '/kalos',
+    '/adonit',
+    '/map2030',
+    '/role-of-board',
+    '/adonit-photography',
+    '/adonit-phonecase',
+    '/crystal-link',
+    '/ppt-templates',
+    '/business-cards',
+    '/logo',
+    '/ministry',
+  ],
+
+  // ----------------------------------------------------------
   // PROJECT LINKS
   // Map a project's name (as it appears in your portfolio
   // content) to its live URL — a case study page, live site,
