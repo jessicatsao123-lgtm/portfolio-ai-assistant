@@ -94,8 +94,7 @@ const jessConfig = {
   // pages — everything else keeps working fine without it.
   // ----------------------------------------------------------
   projectLinks: {
-    // "Indiana Fever": "https://indiana-fever.framer.website/",
-    // "Present App": "https://your-app-url.com",
+    // "Your Project Name": "https://your-project-url.com",
   },
 
   // ----------------------------------------------------------
