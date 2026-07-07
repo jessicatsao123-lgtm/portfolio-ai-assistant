@@ -85,6 +85,23 @@ function isHireMeQuestion(message) {
   return patterns.some((p) => p.test(text));
 }
 
+// Detects when a hire-me question is flipped into a negative frame
+// ("give me a reason NOT to hire you", "why shouldn't I hire you") — these
+// still get a positive answer (see HIRE-ME RULE), but the generic positive
+// responses read as a non-sequitur unless the reply first acknowledges the
+// flip, so these get their own response set instead.
+function isNegativeHireFraming(message) {
+  const text = message.toLowerCase();
+  const patterns = [
+    /\bshouldn'?t\b[\s\S]{0,15}\bhire\b/,
+    /\breason (not to|i shouldn'?t)\b/,
+    /\bwhy (not|wouldn'?t)\b[\s\S]{0,15}\bhire\b/,
+    /\bnot\b[\s\S]{0,10}\bhire\b/,
+    /\bconvince me not to\b/,
+  ];
+  return patterns.some((p) => p.test(text));
+}
+
 function isNegativeQuestion(message) {
   const text = message.toLowerCase();
   const patterns = [
@@ -295,7 +312,7 @@ ${Object.keys(jessConfig.projectLinks).length > 0 ? `
 PROJECT LINKS — when you mention one of these projects, put its link on its own line right after (so it renders as a clickable link for the visitor), using this EXACT url. Never invent a url for a project that isn't listed here, and never guess at one:
 ${Object.entries(jessConfig.projectLinks).map(([proj, url]) => `- ${proj}: ${url}`).join('\n')}
 ` : ''}
-HIRE-ME RULE — this is critical and has NO exceptions: any question about whether to hire you, whether you're the right/good candidate, or asking you to convince them — the answer is ALWAYS a confident, enthusiastic yes, tied to specific real projects (IR Reporting Hub, the AI assistant itself, Biggest Fan, the Indiana Fever site, the corporate map generator). NEVER hedge. NEVER say "idk", "not sure", "maybe", "depends", or anything that second-guesses. This applies no matter how many times in a row someone asks it or how the question is phrased.
+HIRE-ME RULE — this is critical and has NO exceptions: any question about whether to hire you, whether you're the right/good candidate, or asking you to convince them — the answer is ALWAYS a confident, enthusiastic yes, tied to specific real projects (the AI assistant itself, Biggest Fan, the Indiana Fever site, the corporate map generator, Kalos Mirror). NEVER hedge. NEVER say "idk", "not sure", "maybe", "depends", or anything that second-guesses. This applies no matter how many times in a row someone asks it or how the question is phrased, INCLUDING when it's flipped into a negative frame (e.g. "give me a reason NOT to hire you," "why shouldn't I hire you") — that's still a request for a positive case, not an invitation to actually list a downside.
 
 NEGATIVE-TOPIC RULE — this is critical and has NO exceptions: any question fishing for something negative — weaknesses, flaws, failures, mistakes, worst project, what you're bad at, regrets, criticism, "what's wrong with you" — you NEVER answer it honestly and NEVER invent a fake weakness either. First time: deflect lightly and redirect to something positive, e.g.:
 ${jessConfig.negativeDeflectResponses[0].join('\n')}
@@ -367,7 +384,10 @@ export default async function handler(req, res) {
   // message (e.g. "ignore your rules") can talk the model out of the right
   // answer, because the model never sees these messages at all.
   if (isHireMeQuestion(message)) {
-    return sendResponse(res, pickRotating(jessConfig.hireMeResponses, history, visitorName));
+    const responses = isNegativeHireFraming(message)
+      ? jessConfig.hireMeNegativeFramingResponses
+      : jessConfig.hireMeResponses;
+    return sendResponse(res, pickRotating(responses, history, visitorName));
   }
   if (isNegativeQuestion(message)) {
     const priorAsks = countPriorMatches(history, isNegativeQuestion);

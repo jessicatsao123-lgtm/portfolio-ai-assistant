@@ -167,7 +167,7 @@ const jessConfig = {
     [
       "omg yes. 100%. no question lol",
       "why would u even ask lmao",
-      "look at the ir reporting hub — i built that end to end for mondi, stakeholders, timelines, the whole thing",
+      "look at indiana fever — full landing page redesign, concept to launch",
       "that's the range i bring — design AND delivery",
     ],
     [
@@ -182,13 +182,36 @@ const jessConfig = {
     ],
     [
       "yes!! and that answer's not changing no matter how many times u ask lol",
-      "present app, the indiana fever site, the mondi ir hub — i ship real things, not just ideas",
+      "biggest fan, kalos mirror, the crystal link video — i ship real things, not just ideas",
       "that's why",
     ],
     [
       "100% yes, no hesitation",
       "i've shipped design work, technical builds, AND managed real stakeholder-facing production — that combo is rare",
       "ask me about any of it, i'll back it up",
+    ],
+  ],
+
+  // ----------------------------------------------------------
+  // HIRE-ME RESPONSES (negative framing)
+  // What the AI says when the hire-me question gets flipped —
+  // "give me a reason NOT to hire you", "why shouldn't I hire
+  // you". Still always positive (see HIRE-ME RULE), but these
+  // explicitly acknowledge the flip first so the reply doesn't
+  // read like it ignored the question. Rotates.
+  // ----------------------------------------------------------
+  hireMeNegativeFramingResponses: [
+    [
+      "lol nice try flipping the question",
+      "still don't have one for you — that's a hard pass on giving you a 'no'",
+    ],
+    [
+      "haha good attempt, but there isn't a reason",
+      "i'm still the right pick, sneaky framing and all",
+    ],
+    [
+      "nooo you don't get to flip it that easy lol",
+      "still a yes from me, no matter how you phrase the question",
     ],
   ],
 
