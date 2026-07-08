@@ -334,13 +334,13 @@ const jessConfig = {
   ],
 
   // ----------------------------------------------------------
-  // NO-COMMITMENT RESPONSES
-  // What the AI says if asked to confirm salary, availability,
-  // start dates, or anything else it shouldn't decide on jess's
-  // behalf. Always redirects to a real conversation with her.
-  // Rotates.
+  // PRICING RESPONSES
+  // What the AI says for anything about cost, rate, budget, or
+  // salary — the ONLY category of question this AI won't answer
+  // directly. Always redirects to a real conversation with her,
+  // never gives a number or range. Rotates.
   // ----------------------------------------------------------
-  noCommitmentResponses: [
+  pricingResponses: [
     [
       "oop that's above my pay grade lol",
       "that kind of thing needs the real jess, shoot her an email and she'll sort the details",
