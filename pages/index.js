@@ -12,10 +12,10 @@ const CHAT_HISTORY_KEY = 'jess-chat-messages'
 // of opening a new one, so clicking through feels like following a link on
 // the site itself rather than leaving a popup open behind a new tab — the
 // chat panel and this conversation's history both persist across that
-// navigation (see the sessionStorage load/save below, and the parent page's
-// chat-widget.js, which reopens the panel the same way). External links
-// (LinkedIn, etc.) still open in a new tab so the visitor doesn't lose their
-// place on the portfolio entirely.
+// navigation (see chat-widget.js on the parent page, which owns that
+// persistence — and the postMessage handshake below that reports this
+// conversation to it). External links (LinkedIn, etc.) still open in a new
+// tab so the visitor doesn't lose their place on the portfolio entirely.
 function renderLine(line) {
   return line.split(URL_PATTERN).map((part, i) =>
     part.startsWith('http://') || part.startsWith('https://')
@@ -55,13 +55,35 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
-  // Same-tab navigation to a project link (see renderLine) tears down and
-  // reloads this iframe on the destination page — sessionStorage is scoped
-  // to this origin, not to any one page, so it survives that and the
-  // restored state above picks the conversation back up where it left off.
+  // Persistence lives on the PARENT page (chat-widget.js), not here.
+  // This iframe is a third-party embed from the browser's perspective
+  // (different Vercel project/origin — Vercel registers *.vercel.app on
+  // the public suffix list specifically so projects can't share storage),
+  // and browsers increasingly partition or restrict a third-party iframe's
+  // OWN sessionStorage, so relying on it alone for cross-page persistence
+  // is fragile. Instead: ask the parent for any saved conversation on
+  // mount, restore it if one comes back, and report every change to the
+  // parent so it can persist it on ITS (first-party, unrestricted) origin.
+  // sessionStorage here is kept only as a same-page fallback for when this
+  // is visited standalone, outside any iframe (parent === self, so these
+  // postMessage calls are harmless no-ops in that case).
+  useEffect(() => {
+    function handleParentMessage(e) {
+      if (e.origin !== PORTFOLIO_ORIGIN) return
+      if (e.data?.type === 'jt-chat-restore' && Array.isArray(e.data.messages) && e.data.messages.length > 0) {
+        setMessages(e.data.messages)
+        setStarted(e.data.messages.length > 1)
+      }
+    }
+    window.addEventListener('message', handleParentMessage)
+    try { window.parent.postMessage({ type: 'jt-chat-ready' }, PORTFOLIO_ORIGIN) } catch {}
+    return () => window.removeEventListener('message', handleParentMessage)
+  }, [])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     try { window.sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages)) } catch {}
+    try { window.parent.postMessage({ type: 'jt-chat-messages', messages }, PORTFOLIO_ORIGIN) } catch {}
   }, [messages])
 
   async function sendMessage(text) {
