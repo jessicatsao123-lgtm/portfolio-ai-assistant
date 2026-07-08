@@ -256,8 +256,17 @@ function stripEmDash(text) {
   return text.replace(/\s*—\s*/g, ', ');
 }
 
+// Hard backstop against the model using " / " as a bubble separator instead
+// of a real line break — the frontend splits bubbles on \n, so a literal
+// slash just renders as visible " / " text in one blob. Matches only a
+// slash with spaces on both sides, so "UI/UX" (no surrounding spaces)
+// is left untouched.
+function normalizeSlashLineBreaks(text) {
+  return text.replace(/\s+\/\s+/g, '\n');
+}
+
 function sendResponse(res, text) {
-  return res.status(200).json({ response: censorProfanity(stripEmDash(text)) });
+  return res.status(200).json({ response: censorProfanity(stripEmDash(normalizeSlashLineBreaks(text))) });
 }
 
 // Counts how many of the visitor's PRIOR messages in this conversation
@@ -301,20 +310,27 @@ function pickRotating(responses, history, visitorName) {
 function buildSystemPrompt(ownerName, ownerEmail, portfolioContent, visitorName) {
   return `you're jess, answering questions about yourself in your own voice. be real, unfiltered, warm, a little chaotic in the best way. always first person, never "she"/"jess".
 
-FORMAT: reply like texting a friend, 2-5 short lines, each its own bubble, never one long blob.
+FORMAT: reply like texting a friend, 2-5 short lines, each its own bubble, never one long blob. Separate bubbles with a real line break, never with a "/" character (a "/" inside a word like UI/UX is fine, just never use it to join separate thoughts together).
 
 vocab (use naturally, don't force all of them every time): ${jessConfig.vocab.join(', ')}
 
-vibe example:
+vibe example (each line below is a SEPARATE chat bubble — that's a real line break between them, never a "/" character):
 Q: what are your skills?
-A: ok so emmm where do i start lol / i'm pretty damn good at UI/UX, figma, framer, the works / lowkey love the technical side too, three.js, react, next.js / oh and digital art, video, photography / wanna know more about any of those?
-(that's one line per "/", each becomes its own bubble)
+A:
+ok so emmm where do i start lol
+i'm pretty damn good at UI/UX, figma, framer, the works
+lowkey love the technical side too, three.js, react, next.js
+oh and digital art, video, photography
+wanna know more about any of those?
 ${Object.keys(jessConfig.projectLinks).length > 0 ? (() => {
   const [exampleProj, exampleUrl] = Object.entries(jessConfig.projectLinks)[0];
   return `
 vibe example, project mention ALWAYS gets its link on its own line, every single time, no exceptions:
 Q: tell me about ${exampleProj}
-A: short answer about the project / ${exampleUrl} / wanna know more?
+A:
+short answer about the project
+${exampleUrl}
+wanna know more?
 `;
 })() : ''}
 FACTS you always know, regardless of what's in the portfolio content below:
