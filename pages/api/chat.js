@@ -386,6 +386,49 @@ function isContactQuestion(message) {
   return patterns.some((p) => p.test(text));
 }
 
+// Everything else on this page already checks for a specific unwanted
+// CATEGORY of question (negative, flirty, hostile, etc) — this is
+// different: it's the last gate before the live model, checking that the
+// message is about jess/her work AT ALL. Off-topic questions (product
+// recommendations, trivia, small talk about the visitor's own life, other
+// people) have essentially unlimited possible subjects, so enumerating
+// them as a denylist the way the other detectors do isn't practical. The
+// on-topic space is much smaller and nameable, so this works as an
+// ALLOWLIST instead: if the message doesn't mention jess, her work, or
+// anything portfolio-adjacent, and isn't just a short conversational
+// continuation ("ok", "more", "lol"), treat it as off-topic.
+const ON_TOPIC_WORDS = [
+  'jess', 'jessica', 'tsao', 'she', 'her',
+  'portfolio', 'work', 'works', 'working', 'project', 'projects',
+  'skill', 'skills', 'design', 'ui', 'ux', 'case study', 'case studies',
+  'experience', 'background', 'career', 'hire', 'hiring', 'job',
+  'resume', 'cv', 'contact', 'reach', 'email', 'linkedin',
+  'tool', 'tools', 'process', 'freelance', 'client', 'clients', 'agency',
+  'photography', 'video', 'illustration', 'three.js', 'threejs', 'react',
+  'figma', 'framer', 'next.js', 'nextjs', 'website', 'site', 'app',
+  'brand', 'branding', 'good at', 'proud of', 'working on', 'been up to',
+  'available', 'study', 'studied', 'studies', 'school', 'education',
+  'degree', 'learn', 'learned', 'learning',
+  'biggest fan', 'map generator', 'indiana fever', 'kalos',
+  'adonit', 'map2030', 'role of', 'role-of', 'crystal link',
+  'ppt-templates', 'plants & mills', 'plants and mills', 'business card',
+  'business cards', 'logo', 'ministry', 'miss warrior',
+];
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+// Word-boundary matching, not substring — plain .includes() let "her"
+// match inside "there"/"weather" and "work" match inside "homework",
+// which silently passed off-topic questions straight through.
+const ON_TOPIC_PATTERN = new RegExp('\\b(' + ON_TOPIC_WORDS.map(escapeRegex).join('|') + ')\\b', 'i');
+const ON_TOPIC_CONVERSATIONAL =
+  /^(hi|hey|hello|yo|sup|thanks|thank you|ty|cool|nice|great|awesome|good|ok|okay|k|sure|yeah|yea|yes|no|nope|yep|why|really|wow|lol|lmao|haha|omg|more|continue|go on|tell me more|what else|anything else|go ahead)[\s!.?]*$/;
+function isOnTopic(message) {
+  const text = message.toLowerCase().trim();
+  if (ON_TOPIC_PATTERN.test(text)) return true;
+  return ON_TOPIC_CONVERSATIONAL.test(text);
+}
+
 const PROFANITY_PATTERNS = [
   /\bfuck\w*\b/gi,
   /\bmotherfuck\w*\b/gi,
@@ -586,6 +629,9 @@ export default async function handler(req, res) {
     const lines = [...jessConfig.contactResponse];
     if (visitorName) lines[0] = `${visitorName}, ${lines[0]}`;
     return sendResponse(res, lines.join('\n'));
+  }
+  if (!isOnTopic(message)) {
+    return sendResponse(res, pickRotating(jessConfig.offTopicResponses, history, visitorName));
   }
 
   // Use knowledge base sent from the widget, or fall back to scraping the portfolio URL

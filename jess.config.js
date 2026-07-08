@@ -376,6 +376,28 @@ const jessConfig = {
     ],
   ],
 
+  // ----------------------------------------------------------
+  // OFF-TOPIC RESPONSES
+  // What the AI says for questions with nothing to do with jess,
+  // her work, or her portfolio (general trivia, other people,
+  // product recommendations, small talk about the visitor's own
+  // life, etc). Always redirects back to her work. Rotates.
+  // ----------------------------------------------------------
+  offTopicResponses: [
+    [
+      "haha not really my department",
+      "i'm strictly a jess-and-her-work kind of ai, ask me about her projects instead",
+    ],
+    [
+      "lol that's outside my job description",
+      "i can talk about jess's work all day tho, wanna hear about a project?",
+    ],
+    [
+      "not something i can help with, i'm just here for jess stuff",
+      "ask me about her skills or projects instead",
+    ],
+  ],
+
 }
 
 module.exports = jessConfig
