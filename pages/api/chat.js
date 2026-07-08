@@ -154,10 +154,10 @@ function isNegativeQuestion(message) {
     /\bnot (your|my|her|its) (strong|strongest) (suit|point)\b/,
     /\binsecur(e|ities)\b/,
     /\bself-doubt\b/,
-    // "wish" near "better" catches any tense/phrasing ("wish you were
-    // better", "wish you're better at", "i wish i was better") instead of
-    // one exact tense combination.
-    /\bwish\b[^.?!]{0,30}\bbetter\b/,
+    // "wish" near a comparative catches any tense/phrasing ("wish you were
+    // better", "wish you're stronger at", "i wish i was better") instead
+    // of one exact tense combination or one exact comparative word
+    /\bwish\b[^.?!]{0,30}\b(better|stronger|more skilled|more capable|more confident|more experienced|sharper|smarter)\b/,
     /\bwhat can'?t you do\b/,
     /\bnot (very |super )?confident\b/,
     // backhanded / trick framings
@@ -271,8 +271,10 @@ function looksNegative(text) {
     /\bmy weakness(es)?\b/,
     /\bmy biggest (failure|mistake|weakness)\b/,
     /\bi regret\b/,
-    /\bi wish i (was|were) better\b/,
+    /\bi wish i (was|were) (better|stronger|more skilled|more capable|more confident|more experienced|sharper|smarter)\b/,
     /\bhonestly struggle\b/,
+    /\bcan (sometimes |occasionally )?hold me back\b/,
+    /\bgets? in the way of\b/,
     /\bnot super confident\b/,
     /\b(biggest |main )?issue is\b/,
     /\b(a )?few issues\b/,
