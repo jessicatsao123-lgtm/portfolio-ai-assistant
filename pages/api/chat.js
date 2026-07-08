@@ -107,6 +107,8 @@ function isNegativeQuestion(message) {
   const patterns = [
     /\bweakness(es)?\b/,
     /\bbad at\b/,
+    /\bnot (that |very |super )?(good|great|skilled|strong) (at|in)\b/,
+    /\baren'?t (that |very |super )?(good|great|skilled|strong) (at|in)\b/,
     /\bworst (project|thing|work)\b/,
     /\bbiggest (failure|mistake)\b/,
     /\bfailure(s)?\b/,
@@ -116,7 +118,7 @@ function isNegativeQuestion(message) {
     /\bdownside(s)?\b/,
     /\bwhat('?s| is) wrong with\b/,
     /\bproblems? (do|does) (you|she|jess) have\b/,
-    /\bwhat don'?t you like about\b/,
+    /\bdon'?t like about (yourself|you|her|jess)\b/,
     /\bregret(s)?\b/,
     /\bleast proud of\b/,
     /\bmistakes? (have you|has she|she'?s) made\b/,
@@ -124,8 +126,45 @@ function isNegativeQuestion(message) {
     /\bsomething negative\b/,
     /\bsay something bad\b/,
     /\bworst thing about (you|her)\b/,
+    /\blimitations?\b/,
+    /\bfall short\b/,
+    /\b(need|room) (to|for) improve(ment)?\b/,
+    /\bcould improve on\b/,
+    /\bneeds? work\b/,
+    /\bnot (your|my|her) (strong|strongest) (suit|point)\b/,
+    /\binsecur(e|ities)\b/,
+    /\bself-doubt\b/,
+    /\bwish (you'?re?|she) (were|was) better\b/,
+    /\bwhat can'?t you do\b/,
+    /\bnot (very |super )?confident\b/,
   ];
   return patterns.some((p) => p.test(text));
+}
+
+// Backstop for the input-detection above: keyword matching can never cover
+// every way to ask about weaknesses/failures, so this scans the MODEL'S
+// OWN reply for self-critical language before it's ever sent, regardless
+// of how the question that produced it was phrased. If the model answered
+// honestly about a real limitation despite the system prompt telling it
+// not to (small/fast models don't reliably hold to instructions like this
+// under every phrasing), this discards that reply and substitutes the same
+// canned deflection a caught negative question would have gotten.
+function looksSelfCritical(text) {
+  const t = text.toLowerCase();
+  const patterns = [
+    /\bi struggle with\b/,
+    /\bi'?m (not|still) (that |super )?confident\b/,
+    /\bstill learning\b/,
+    /\bnot (my|a) strong(est)? (suit|point)\b/,
+    /\bi'?m (bad|not good|not great|not skilled) (at|in)\b/,
+    /\bmy weakness(es)?\b/,
+    /\bmy biggest (failure|mistake|weakness)\b/,
+    /\bi regret\b/,
+    /\bi wish i (was|were) better\b/,
+    /\bhonestly struggle\b/,
+    /\bnot super confident\b/,
+  ];
+  return patterns.some((p) => p.test(t));
 }
 
 function isPromptLeakQuestion(message) {
@@ -468,6 +507,9 @@ export default async function handler(req, res) {
 
     const data = await groqRes.json();
     const reply = data.choices?.[0]?.message?.content || '';
+    if (looksSelfCritical(reply)) {
+      return sendResponse(res, pickRotating(jessConfig.negativeDeflectResponses, history, visitorName));
+    }
     return sendResponse(res, reply);
   } catch (error) {
     console.error('Fetch error:', error.message);
