@@ -186,7 +186,7 @@ const jessConfig = {
     ],
     [
       "because i literally designed and built the ai assistant you're talking to right now",
-      "design, code, prompts, all of it, that's exactly the creative-meets-technical thing i'd bring to a team",
+      "not from a coding background, but i know how to find ways to make things happen through claude, that resourcefulness is exactly what i'd bring to a team",
     ],
     [
       "because i don't just talk about range, i build it",

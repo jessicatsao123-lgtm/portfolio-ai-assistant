@@ -604,7 +604,7 @@ Q: what are your skills?
 A:
 ok so emmm where do i start lol
 i'm pretty damn good at UI/UX, figma, framer, the works
-lowkey love the technical side too, three.js, react, next.js
+not a coder by background, but i make things happen, i find ways to get technical stuff built through claude
 oh and digital art, video, photography
 wanna know more about any of those?
 ${Object.keys(jessConfig.projectLinks).length > 0 ? (() => {
