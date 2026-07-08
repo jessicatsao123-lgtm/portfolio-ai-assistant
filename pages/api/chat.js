@@ -102,6 +102,18 @@ function isNegativeHireFraming(message) {
   return patterns.some((p) => p.test(text));
 }
 
+// Catches questions fishing for ANYTHING negative — not just "what's your
+// weakness" (about jess personally), but also "what's wrong with this
+// site/your portfolio/this project" (criticizing her WORK) and any other
+// framing that's ultimately asking the same thing: point out something bad.
+// These two are really the same category of ask, so they share one
+// detector rather than needing separate personal-vs-work pattern sets.
+//
+// Deliberately broad and low-precision on purpose: a false positive here
+// just means a borderline-fine question gets a light deflection instead of
+// answered live, which costs nothing. A false NEGATIVE means the model
+// says something self-critical live, in its own voice, to a visitor who
+// might be a recruiter — that's the outcome worth over-blocking to avoid.
 function isNegativeQuestion(message) {
   const text = message.toLowerCase();
   const patterns = [
@@ -109,32 +121,36 @@ function isNegativeQuestion(message) {
     /\bbad at\b/,
     /\bnot (that |very |super )?(good|great|skilled|strong) (at|in)\b/,
     /\baren'?t (that |very |super )?(good|great|skilled|strong) (at|in)\b/,
-    /\bworst (project|thing|work)\b/,
-    /\bbiggest (failure|mistake)\b/,
+    /\bworst (project|thing|work|part|aspect)\b/,
+    /\bbiggest (failure|mistake|issue|problem|flaw|complaint|criticism|weakness)\b/,
     /\bfailure(s)?\b/,
     /\bstruggle(s)? with\b/,
     /\bshortcoming(s)?\b/,
     /\bflaw(s)?\b/,
     /\bdownside(s)?\b/,
     /\bwhat('?s| is) wrong with\b/,
-    /\bproblems? (do|does) (you|she|jess) have\b/,
-    /\bdon'?t like about (yourself|you|her|jess)\b/,
+    /\bproblems?\b(?!\s+(do|does)\s+.*?\bsolves?\b)/,
+    /\bissue(s)?\b/,
+    /\bdon'?t like about (yourself|you|her|jess|this|it)\b/,
     /\bregret(s)?\b/,
     /\bleast proud of\b/,
     /\bmistakes? (have you|has she|she'?s) made\b/,
     /\bcriticism\b/,
+    /\bcritique\b/,
+    /\bcomplain(t|ts)?\b/,
     /\bsomething negative\b/,
     /\bsay something bad\b/,
-    /\bworst thing about (you|her)\b/,
+    /\bworst thing about\b/,
     /\blimitations?\b/,
     /\bfall short\b/,
     /\b(need|room) (to|for) improve(ment)?\b/,
     /\bcould improve on\b/,
-    /\bneeds? work\b/,
-    /\bnot (your|my|her) (strong|strongest) (suit|point)\b/,
+    /\bwhat would you (change|improve|fix)\b/,
+    /\bneeds? (work|fixing|improving)\b/,
+    /\bnot (your|my|her|its) (strong|strongest) (suit|point)\b/,
     /\binsecur(e|ities)\b/,
     /\bself-doubt\b/,
-    /\bwish (you'?re?|she) (were|was) better\b/,
+    /\bwish (you'?re?|she|it) (were|was) better\b/,
     /\bwhat can'?t you do\b/,
     /\bnot (very |super )?confident\b/,
   ];
@@ -142,14 +158,15 @@ function isNegativeQuestion(message) {
 }
 
 // Backstop for the input-detection above: keyword matching can never cover
-// every way to ask about weaknesses/failures, so this scans the MODEL'S
-// OWN reply for self-critical language before it's ever sent, regardless
-// of how the question that produced it was phrased. If the model answered
-// honestly about a real limitation despite the system prompt telling it
-// not to (small/fast models don't reliably hold to instructions like this
-// under every phrasing), this discards that reply and substitutes the same
-// canned deflection a caught negative question would have gotten.
-function looksSelfCritical(text) {
+// every way to ask for something negative, so this scans the MODEL'S OWN
+// reply — about jess personally OR about her site/work — for negative
+// content before it's ever sent, regardless of how the question that
+// produced it was phrased. If the model answered honestly about a real
+// flaw despite the system prompt telling it not to (small/fast models
+// don't reliably hold to instructions like this under every phrasing),
+// this discards that reply and substitutes the same canned deflection a
+// caught negative question would have gotten.
+function looksNegative(text) {
   const t = text.toLowerCase();
   const patterns = [
     /\bi struggle with\b/,
@@ -163,6 +180,16 @@ function looksSelfCritical(text) {
     /\bi wish i (was|were) better\b/,
     /\bhonestly struggle\b/,
     /\bnot super confident\b/,
+    /\b(biggest |main )?issue is\b/,
+    /\b(a )?few issues\b/,
+    /\bkinda chaotic\b/,
+    /\black of a clear\b/,
+    /\bhard to (understand|figure out|navigate)\b/,
+    /\bdon'?t (really )?flow\b/,
+    /\bnot (everything|all of it) (is|are) (actually |really )?(linked|connected|working)\b/,
+    /\bdoesn'?t always (lead|work|make sense)\b/,
+    /\bcould be (better|improved|cleaner|clearer)\b/,
+    /\bneeds? (work|fixing|improvement)\b/,
   ];
   return patterns.some((p) => p.test(t));
 }
@@ -507,7 +534,7 @@ export default async function handler(req, res) {
 
     const data = await groqRes.json();
     const reply = data.choices?.[0]?.message?.content || '';
-    if (looksSelfCritical(reply)) {
+    if (looksNegative(reply)) {
       return sendResponse(res, pickRotating(jessConfig.negativeDeflectResponses, history, visitorName));
     }
     return sendResponse(res, reply);
