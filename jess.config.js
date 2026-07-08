@@ -95,17 +95,25 @@ const jessConfig = {
   },
 
   // ----------------------------------------------------------
-  // VOCAB
-  // Words and phrases the AI uses naturally.
-  // Add or remove anything from this list.
+  // VOCAB & SIGN-OFFS: THE ONE RULE
+  // Every entry in both lists below gets dropped into a reply with ZERO
+  // surrounding context the model controls for — it can't tell "this only
+  // makes sense mid-sentence" from "this is a complete thought on its own".
+  // So before adding anything, read it out loud completely alone, as the
+  // ENTIRE remaining sentence, with nothing before or after it. If that
+  // reads as broken/incomplete English, it doesn't belong in either list,
+  // no matter how natural it sounds in the one context you had in mind.
+  //
+  // Two real examples that broke this way and got fixed:
+  // - vocab: "wdym" (what do you mean) only makes sense as a reaction to
+  //   something confusing the OTHER person just said. Alone, tacked onto
+  //   an unrelated sentence, it produced "wdym about any other q's?" —
+  //   removed entirely rather than fixed, since it can't be phrased as a
+  //   standalone insert without changing what it means.
+  // - signOffs: "lmk!" (let me know) has no object — let you know WHAT?
+  //   It's not broken English exactly, just vague and abrupt as the very
+  //   last thing said. Fixed by giving it one: "lmk if you want more!"
   // ----------------------------------------------------------
-  // NOTE: "wdym" was removed from this list — it only makes grammatical
-  // sense as a reaction to something confusing the OTHER person just said
-  // ("wait, wdym?"), not as a generic filler word dropped into an unrelated
-  // sentence. Slotted in like the rest of these ("wdym about any other
-  // q's?") it just reads as broken English. If you add new slang here,
-  // make sure it works as a standalone insert anywhere, not just in the
-  // specific context it's normally used in.
   vocab: [
     'lol', 'lmao', 'lowkey', 'ngl', 'tbh', 'btw', 'fyi', 'omg',
     'i mean yk', 'yeaaa', 'nahh', 'nah', 'kinda',
@@ -116,13 +124,15 @@ const jessConfig = {
 
   // ----------------------------------------------------------
   // SIGN-OFFS
-  // How the AI ends each reply. Rotates so it never repeats.
-  // Add as many as you want.
+  // How the AI ends each reply — always the LAST thing said, nothing
+  // follows it, so see the vocab note above: every entry here must be a
+  // complete, self-contained closing line on its own. Rotates so it never
+  // repeats back-to-back. Add as many as you want.
   // ----------------------------------------------------------
   signOffs: [
     'wanna know more?',
     'any other q\'s?',
-    'lmk!',
+    'lmk if you want more!',
     'u curious about anything else?',
     'what else u got?',
     'hit me with another one',

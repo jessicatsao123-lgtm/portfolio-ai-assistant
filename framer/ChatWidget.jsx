@@ -48,27 +48,63 @@ function toLines(text) {
 }
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g
+// Set this to your site's own domain so project links navigate in the same
+// tab (feels like following a link on the site) while external links
+// (LinkedIn, etc.) still open in a new one.
+const SITE_ORIGIN = "https://jess-tsao-creative.vercel.app"
+const CHAT_HISTORY_KEY = "jess-chat-messages"
+const CHAT_OPEN_KEY = "jess-chat-open"
 
 // Renders a line of text with any http(s) urls turned into real clickable
 // links, so a project mention with its url (see jessConfig.projectLinks)
-// is clickable straight through to the case study.
+// is clickable straight through to the case study. Same-site links use the
+// default same-tab navigation so history/session state (see below) carries
+// across; external links open in a new tab so the visitor doesn't lose
+// their place on the portfolio entirely.
 function renderLine(line) {
   return line.split(URL_PATTERN).map((part, i) =>
     part.startsWith("http://") || part.startsWith("https://")
-      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>{part}</a>
+      ? <a
+          key={i}
+          href={part}
+          target={part.startsWith(SITE_ORIGIN) ? "_self" : "_blank"}
+          rel="noopener noreferrer"
+          style={{ color: "inherit", textDecoration: "underline" }}
+        >{part}</a>
       : part
   )
 }
 
+function loadSaved(key) {
+  if (typeof window === "undefined") return null
+  try { return JSON.parse(window.sessionStorage.getItem(key)) } catch { return null }
+}
+
 export default function ChatWidget() {
-  const [isOpen, setIsOpen]     = useState(false)
+  const [isOpen, setIsOpenState] = useState(() => loadSaved(CHAT_OPEN_KEY) === true)
   const [input, setInput]       = useState("")
   const [isLoading, setLoading] = useState(false)
 
-  const [messages, setMessages] = useState([{ role: "assistant", lines: toLines(GREETING) }])
+  const [messages, setMessages] = useState(() => {
+    const saved = loadSaved(CHAT_HISTORY_KEY)
+    return Array.isArray(saved) && saved.length > 0 ? saved : [{ role: "assistant", lines: toLines(GREETING) }]
+  })
 
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
+
+  // A same-tab navigation to a project link reloads this component fresh on
+  // the destination page — sessionStorage survives that (scoped to this
+  // browser tab + site, not to any one page), so both the open/closed state
+  // and the full conversation pick back up where they left off.
+  function setIsOpen(v) {
+    setIsOpenState(v)
+    if (typeof window !== "undefined") { try { window.sessionStorage.setItem(CHAT_OPEN_KEY, JSON.stringify(v)) } catch {} }
+  }
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try { window.sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages)) } catch {}
+  }, [messages])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages, isLoading])
   useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 120) }, [isOpen])
@@ -198,7 +234,7 @@ export default function ChatWidget() {
 
       {/* Trigger pill */}
       <button
-        onClick={() => setIsOpen(p => !p)}
+        onClick={() => setIsOpen(!isOpen)}
         onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(201,134,110,0.45)" }}
         onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)";    e.currentTarget.style.boxShadow = "0 4px 16px rgba(201,134,110,0.3)" }}
         style={{ background: C.accent, color: "#fff", border: "none", borderRadius: 24, padding: "11px 20px", cursor: "pointer", fontWeight: 700, fontSize: 14, boxShadow: "0 4px 16px rgba(201,134,110,0.3)", display: "flex", alignItems: "center", gap: 8, transition: "transform 0.15s, box-shadow 0.15s", whiteSpace: "nowrap" }}

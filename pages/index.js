@@ -2,29 +2,67 @@ import { useState, useRef, useEffect } from 'react'
 import jessConfig from '../jess.config.js'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g
+const PORTFOLIO_ORIGIN = 'https://jess-tsao-creative.vercel.app'
+const CHAT_HISTORY_KEY = 'jess-chat-messages'
 
 // Renders a line of text with any http(s) urls turned into real clickable
 // links, so a project mention with its url (see jessConfig.projectLinks)
-// is clickable straight through to the case study.
+// is clickable straight through to the case study. A same-site project link
+// navigates the whole tab (target="_top" breaks out of this iframe) instead
+// of opening a new one, so clicking through feels like following a link on
+// the site itself rather than leaving a popup open behind a new tab — the
+// chat panel and this conversation's history both persist across that
+// navigation (see the sessionStorage load/save below, and the parent page's
+// chat-widget.js, which reopens the panel the same way). External links
+// (LinkedIn, etc.) still open in a new tab so the visitor doesn't lose their
+// place on the portfolio entirely.
 function renderLine(line) {
   return line.split(URL_PATTERN).map((part, i) =>
     part.startsWith('http://') || part.startsWith('https://')
-      ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>{part}</a>
+      ? <a
+          key={i}
+          href={part}
+          target={part.startsWith(PORTFOLIO_ORIGIN) ? '_top' : '_blank'}
+          rel="noopener noreferrer"
+          style={{ color: 'inherit', textDecoration: 'underline' }}
+        >{part}</a>
       : part
   )
 }
 
+function loadSavedMessages() {
+  if (typeof window === 'undefined') return null
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(CHAT_HISTORY_KEY))
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 export default function Home() {
-  const [messages, setMessages] = useState([{ role: 'assistant', content: jessConfig.greeting }])
+  const [messages, setMessages] = useState(() => loadSavedMessages() || [{ role: 'assistant', content: jessConfig.greeting }])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [started, setStarted] = useState(false)
+  const [started, setStarted] = useState(() => {
+    const saved = loadSavedMessages()
+    return !!(saved && saved.length > 1)
+  })
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
+
+  // Same-tab navigation to a project link (see renderLine) tears down and
+  // reloads this iframe on the destination page — sessionStorage is scoped
+  // to this origin, not to any one page, so it survives that and the
+  // restored state above picks the conversation back up where it left off.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { window.sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages)) } catch {}
+  }, [messages])
 
   async function sendMessage(text) {
     const trimmed = (text || input).trim()
