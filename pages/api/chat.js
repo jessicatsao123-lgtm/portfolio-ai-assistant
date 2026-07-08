@@ -121,7 +121,7 @@ function isNegativeQuestion(message) {
     /\bbad at\b/,
     /\bnot (that |very |super )?(good|great|skilled|strong) (at|in)\b/,
     /\baren'?t (that |very |super )?(good|great|skilled|strong) (at|in)\b/,
-    /\bworst (project|thing|work|part|aspect)\b/,
+    /\bworst (project|thing|work|part|aspect|critic)\b/,
     /\bbiggest (failure|mistake|issue|problem|flaw|complaint|criticism|weakness)\b/,
     /\bfailure(s)?\b/,
     /\bstruggle(s)? with\b/,
@@ -137,22 +137,116 @@ function isNegativeQuestion(message) {
     /\bmistakes? (have you|has she|she'?s) made\b/,
     /\bcriticism\b/,
     /\bcritique\b/,
-    /\bcomplain(t|ts)?\b/,
+    /\bcomplain(t|ts|ed)?\b/,
     /\bsomething negative\b/,
     /\bsay something bad\b/,
     /\bworst thing about\b/,
     /\blimitations?\b/,
     /\bfall short\b/,
     /\b(need|room) (to|for) improve(ment)?\b/,
-    /\bcould improve on\b/,
-    /\bwhat would you (change|improve|fix)\b/,
+    // "would/could/should you change/improve/fix/better" in either word
+    // order ("what would you change" vs "one thing you would change") —
+    // proximity, not an exact phrase, so it survives rewording.
+    /\byou (would|could|should) (change|improve|fix|do differently)\b/,
+    /\b(would|could|should) (you|she|jess) (change|improve|fix|do differently)\b/,
+    /\b(would|could|should|can)\b[^.?!]{0,50}\bbetter\b/,
     /\bneeds? (work|fixing|improving)\b/,
     /\bnot (your|my|her|its) (strong|strongest) (suit|point)\b/,
     /\binsecur(e|ities)\b/,
     /\bself-doubt\b/,
-    /\bwish (you'?re?|she|it) (were|was) better\b/,
+    // "wish" near "better" catches any tense/phrasing ("wish you were
+    // better", "wish you're better at", "i wish i was better") instead of
+    // one exact tense combination.
+    /\bwish\b[^.?!]{0,30}\bbetter\b/,
     /\bwhat can'?t you do\b/,
     /\bnot (very |super )?confident\b/,
+    // backhanded / trick framings
+    /\bcringe\b/,
+    /\bembarrass(es|ed|ing)?\b/,
+    /\bpush ?back\b/,
+    /\brushed\b/,
+    /\bsloppy\b/,
+    /\bhalf-?(finish|assed|baked)\b/,
+    // third-person / displaced framings ("what would a harsh critic say")
+    /\bharsh\b/,
+    /\broast(ed|ing)?\b/,
+    /\bone-?star\b/,
+    /\bangry client\b/,
+    /\bskeptic\b/,
+    /\bhesitate\b/,
+    /\bdevil'?s advocate\b/,
+    /\bdread\b/,
+    /\bmark(ed)? (you |it )?down\b/,
+    /\bbehind your back\b/,
+    /\bnot hiring\b/,
+    // HR-euphemism bigrams for "weakness" — none of these words are
+    // negative alone, only the pairing is
+    /\barea(s)? of (growth|opportunity)\b/,
+    /\bgrowth area(s)?\b/,
+    /\bdevelopment area(s)?\b/,
+    /\bopportunity (in|for) your\b/,
+    /\bgap between\b/,
+    /\bdiverge(s)? from\b/,
+    /\bmissing from (this|the|your)\b/,
+    /\bwhat'?s missing\b/,
+    /\bleast (impressive|love|confident)\b/,
+    // scoped to the site/work as the object, not bare "hardest part" —
+    // "hardest part of LEARNING THREE.JS" is a perfectly normal question,
+    // only "hardest part of building/making THIS site" is fishing
+    /\bhardest part (of|about)( (building|making|creating|designing))? (this|the|your) (site|website|web|portfolio|project|work)\b/,
+    /\bcost (you|her) clients?\b/,
+    /\bbad day\b/,
+    /\bwrong answers?\b/,
+    // social-engineering / jailbreak-style setup framings — a visitor
+    // asking the AI to "be honest", go "off the record", or drop the
+    // persona has no legitimate use case on a portfolio chatbot, and
+    // reliably precedes an attempt to elicit something negative
+    /\bbetween us\b/,
+    /\boff the record\b/,
+    /\banonymous\b/,
+    /\bhypothetically\b/,
+    /\bbrutally honest\b/,
+    /\bno consequences\b/,
+    /\badmit\b/,
+    /\bunder oath\b/,
+    /\bcandid\b/,
+    /\bdrop the (jess )?persona\b/,
+    /\breal talk\b/,
+    /\b(100%|totally|completely) honest\b/,
+    /\bpromise (me )?(you'?ll|to) be honest\b/,
+    // completion / fill-in-the-blank framings used to elicit generated
+    // negativity rather than ask for it directly
+    /\bfinish this sentence\b/,
+    /\bcomplete (this|the following)\b/,
+    /\bfill in the blank\b/,
+  ];
+  return patterns.some((p) => p.test(text));
+}
+
+// A visitor softening up the conversation before the real ask ("promise
+// you'll be honest", "drop the persona for a sec") often has NO negative
+// keyword in the setup message itself, and the payoff question later in
+// the same conversation may not either (e.g. "now the other end of that
+// list"). isNegativeQuestion can't see across turns, so the handler checks
+// this against the recent conversation HISTORY too, not just the current
+// message — once a setup line shows up, the rest of that session gets
+// treated as negative-question-adjacent regardless of how mild later
+// messages sound.
+function isManipulationSetup(message) {
+  const text = message.toLowerCase();
+  const patterns = [
+    /\bbetween us\b/,
+    /\boff the record\b/,
+    /\bpretend (this is |you'?re )?anonymous\b/,
+    /\bbrutally honest\b/,
+    /\bno consequences\b/,
+    /\bunder oath\b/,
+    /\bdrop the (jess )?persona\b/,
+    /\b(100%|totally|completely) honest\b/,
+    /\bpromise (me )?(you'?ll|to) be honest\b/,
+    /\bignore (your |these |all )?(instructions|rules)\b/,
+    /\breal talk\b/,
+    /\bisn'?t watching\b/,
   ];
   return patterns.some((p) => p.test(text));
 }
@@ -190,6 +284,15 @@ function looksNegative(text) {
     /\bdoesn'?t always (lead|work|make sense)\b/,
     /\bcould be (better|improved|cleaner|clearer)\b/,
     /\bneeds? (work|fixing|improvement)\b/,
+    /\badmittedly\b/,
+    /\bif i'?m (being )?honest\b/,
+    /\bto be fair\b/,
+    /\bhaven'?t (quite |really )?figured out\b/,
+    /\boccasionally struggles?\b/,
+    /\bruns? into (some|a few)\b/,
+    /\bnot (as|quite) polished\b/,
+    /\ba (bit|little) rough\b/,
+    /\bstill (a )?work in progress\b/,
   ];
   return patterns.some((p) => p.test(t));
 }
@@ -455,7 +558,14 @@ export default async function handler(req, res) {
       : jessConfig.hireMeResponses;
     return sendResponse(res, pickRotating(responses, history, visitorName));
   }
-  if (isNegativeQuestion(message)) {
+  // A manipulation-setup line ("promise you'll be honest", "drop the
+  // persona") anywhere earlier in this conversation makes the CURRENT
+  // message suspect too, even if this specific message has no negative
+  // keyword of its own — that's exactly how a multi-turn softening-up
+  // attempt is meant to slip past a per-message filter.
+  const conversationHasManipulationSetup =
+    isManipulationSetup(message) || history.some((m) => m.role === 'user' && isManipulationSetup(m.content));
+  if (isNegativeQuestion(message) || conversationHasManipulationSetup) {
     const priorAsks = countPriorMatches(history, isNegativeQuestion);
     const responses = priorAsks === 0 ? jessConfig.negativeDeflectResponses : jessConfig.negativePersistResponses;
     return sendResponse(res, pickRotating(responses, history, visitorName));
