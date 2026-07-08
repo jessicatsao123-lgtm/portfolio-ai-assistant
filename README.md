@@ -75,9 +75,6 @@ Edit `jess.config.js` at the root of the repo — no code knowledge needed, just
 ```js
 greeting: "hey! ...",     // opening message (\n = separate bubble)
 
-onboardingAskName: "what should i call you?",       // asked once per session
-onboardingAskIdentity: "how do you identify?",      // asked but NEVER used to pick gendered words
-
 projectLinks: {            // project name -> live url; AI links to it when it comes up
   "Indiana Fever": "https://indiana-fever.framer.website/",
 },

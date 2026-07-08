@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import jessConfig from '../jess.config.js'
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g
-const SESSION_NAME_KEY = 'jess-user-name'
-const SESSION_DONE_KEY = 'jess-onboarding-done'
 
 // Renders a line of text with any http(s) urls turned into real clickable
 // links, so a project mention with its url (see jessConfig.projectLinks)
@@ -17,18 +15,7 @@ function renderLine(line) {
 }
 
 export default function Home() {
-  // Onboarding runs once per browser session: ask name, then identity
-  // (unused for personalization — see jess.config.js). Only `userName` is
-  // ever sent to the API or used to personalize replies. Persisted to
-  // sessionStorage so minimizing/reopening the widget (or reloading the
-  // page) within the same browser session doesn't ask again.
-  const [onboardingStep, setOnboardingStep] = useState('askName') // 'askName' | 'askIdentity' | 'done'
-  const [onboardingMessages, setOnboardingMessages] = useState([
-    { role: 'assistant', content: jessConfig.onboardingAskName },
-  ])
-  const [userName, setUserName] = useState(null)
-
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState([{ role: 'assistant', content: jessConfig.greeting }])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [started, setStarted] = useState(false)
@@ -36,46 +23,12 @@ export default function Home() {
   const inputRef = useRef(null)
 
   useEffect(() => {
-    if (window.sessionStorage.getItem(SESSION_DONE_KEY) !== '1') return
-    setUserName(window.sessionStorage.getItem(SESSION_NAME_KEY) || null)
-    setOnboardingMessages([])
-    setMessages([{ role: 'assistant', content: jessConfig.greeting }])
-    setOnboardingStep('done')
-  }, [])
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, onboardingMessages, isLoading])
+  }, [messages, isLoading])
 
   async function sendMessage(text) {
     const trimmed = (text || input).trim()
     if (!trimmed || isLoading) return
-
-    if (onboardingStep !== 'done') {
-      const userMsg = { role: 'user', content: trimmed }
-      setInput('')
-
-      if (onboardingStep === 'askName') {
-        const name = trimmed.toLowerCase() === 'skip' ? null : trimmed.slice(0, 50)
-        setUserName(name)
-        const ack = name ? `nice to meet you, ${name}!` : 'all good!'
-        setOnboardingMessages((prev) => [
-          ...prev,
-          userMsg,
-          { role: 'assistant', content: `${ack}\n${jessConfig.onboardingAskIdentity}` },
-        ])
-        setOnboardingStep('askIdentity')
-        return
-      }
-
-      // askIdentity — captured for the intro but never used for personalization
-      setOnboardingMessages((prev) => [...prev, userMsg])
-      setMessages([{ role: 'assistant', content: jessConfig.greeting }])
-      setOnboardingStep('done')
-      window.sessionStorage.setItem(SESSION_DONE_KEY, '1')
-      if (userName) window.sessionStorage.setItem(SESSION_NAME_KEY, userName)
-      return
-    }
 
     if (!started) setStarted(true)
 
@@ -91,7 +44,7 @@ export default function Home() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed, history, name: userName }),
+        body: JSON.stringify({ message: trimmed, history }),
       })
       const data = await res.json()
       setMessages((prev) => [
@@ -101,7 +54,7 @@ export default function Home() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Something went wrong — please try again.' },
+        { role: 'assistant', content: 'Something went wrong, please try again.' },
       ])
     } finally {
       setIsLoading(false)
@@ -245,7 +198,7 @@ export default function Home() {
           flexDirection: 'column',
           gap: 14,
         }}>
-          {[...onboardingMessages, ...messages].map((msg, i) => {
+          {messages.map((msg, i) => {
             const lines = msg.content
               .split('\n')
               .map(l => l.trim())
@@ -312,21 +265,8 @@ export default function Home() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Identity options (onboarding) */}
-        {onboardingStep === 'askIdentity' && (
-          <div style={{
-            flexShrink: 0,
-            padding: '0 24px 16px',
-            display: 'flex', gap: 8, flexWrap: 'wrap',
-          }}>
-            {[...jessConfig.onboardingIdentityOptions, 'Prefer not to say'].map((opt) => (
-              <button key={opt} className="chip" onClick={() => sendMessage(opt)}>{opt}</button>
-            ))}
-          </div>
-        )}
-
         {/* Suggestion chips */}
-        {onboardingStep === 'done' && !started && (
+        {!started && (
           <div style={{
             flexShrink: 0,
             padding: '0 24px 16px',
@@ -355,11 +295,7 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              onboardingStep === 'askName' ? "what should i call you?"
-              : onboardingStep === 'askIdentity' ? "or type your own..."
-              : "Ask anything about Jess..."
-            }
+            placeholder="Ask anything about Jess..."
             maxLength={500}
             disabled={isLoading}
             autoFocus
