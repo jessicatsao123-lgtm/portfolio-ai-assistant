@@ -61,7 +61,29 @@ const CHAT_OPEN_KEY = "jess-chat-open"
 // default same-tab navigation so history/session state (see below) carries
 // across; external links open in a new tab so the visitor doesn't lose
 // their place on the portfolio entirely.
+const ARROW_LINK = /([^\n]*?)\s*->\s*(https?:\/\/[^\s]+)/
+
+// "Name -> https://..." becomes a link on "Name" instead of showing the
+// full url a second time — see the matching fix + comment in pages/index.js
+// for why this notation leaks into the model's own output.
 function renderLine(line) {
+  const arrowMatch = line.match(ARROW_LINK)
+  if (arrowMatch) {
+    const [full, label, url] = arrowMatch
+    const before = line.slice(0, arrowMatch.index)
+    const after = line.slice(arrowMatch.index + full.length)
+    return [
+      before,
+      <a
+        key="arrow-link"
+        href={url}
+        target={url.startsWith(SITE_ORIGIN) ? "_self" : "_blank"}
+        rel="noopener noreferrer"
+        style={{ color: "inherit", textDecoration: "underline" }}
+      >{label.trim() || url}</a>,
+      ...renderLine(after),
+    ]
+  }
   return line.split(URL_PATTERN).map((part, i) =>
     part.startsWith("http://") || part.startsWith("https://")
       ? <a

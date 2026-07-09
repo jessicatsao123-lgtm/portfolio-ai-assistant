@@ -554,8 +554,18 @@ function normalizeSlashLineBreaks(text) {
   return text.replace(/\s+\/\s+/g, '\n');
 }
 
+// Backstop for the occasional small-model stutter where a word gets
+// generated twice in a row ("Corporate Corporate Map Generator") — not
+// something a system-prompt rule can prevent, since it's a generation
+// glitch rather than the model choosing wrong wording.
+function collapseDuplicateWords(text) {
+  return text.replace(/\b(\w[\w'-]*)\s+\1\b/gi, '$1');
+}
+
 function sendResponse(res, text) {
-  return res.status(200).json({ response: censorProfanity(stripEmDash(normalizeSlashLineBreaks(text))) });
+  return res
+    .status(200)
+    .json({ response: censorProfanity(stripEmDash(normalizeSlashLineBreaks(collapseDuplicateWords(text)))) });
 }
 
 // Counts how many of the visitor's PRIOR messages in this conversation

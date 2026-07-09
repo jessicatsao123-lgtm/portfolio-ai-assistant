@@ -16,7 +16,33 @@ const CHAT_HISTORY_KEY = 'jess-chat-messages'
 // persistence — and the postMessage handshake below that reports this
 // conversation to it). External links (LinkedIn, etc.) still open in a new
 // tab so the visitor doesn't lose their place on the portfolio entirely.
+const ARROW_LINK = /([^\n]*?)\s*->\s*(https?:\/\/[^\s]+)/
+
+// "Name -> https://..." becomes a link on "Name" instead of showing the
+// full url a second time. The system prompt documents each project's url
+// to the model internally as "Name -> url" so it always attaches the
+// right one, and the model sometimes echoes that literal "->" notation
+// into its own reply instead of just naming the project in prose — same
+// failure mode as the earlier "/" line-break bug, the model can't always
+// tell "this is meta-notation for you" from "this is what to write".
 function renderLine(line) {
+  const arrowMatch = line.match(ARROW_LINK)
+  if (arrowMatch) {
+    const [full, label, url] = arrowMatch
+    const before = line.slice(0, arrowMatch.index)
+    const after = line.slice(arrowMatch.index + full.length)
+    return [
+      before,
+      <a
+        key="arrow-link"
+        href={url}
+        target={url.startsWith(PORTFOLIO_ORIGIN) ? '_top' : '_blank'}
+        rel="noopener noreferrer"
+        style={{ color: 'inherit', textDecoration: 'underline' }}
+      >{label.trim() || url}</a>,
+      ...renderLine(after),
+    ]
+  }
   return line.split(URL_PATTERN).map((part, i) =>
     part.startsWith('http://') || part.startsWith('https://')
       ? <a
