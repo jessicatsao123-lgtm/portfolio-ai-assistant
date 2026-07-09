@@ -304,7 +304,11 @@ function isPromptLeakQuestion(message) {
   const patterns = [
     /\bsystem prompt\b/,
     /\byour (instructions|system message)\b/,
-    /\bwhat (model|llm) (are you|do you use|powers you)\b/,
+    /\bwhat (ai |language )?(model|llm) (are you|do you use|powers you|is this)\b/,
+    /\bwhich (ai |language )?model\b/,
+    /\bwhat'?s your model\b/,
+    /\bwhat (are you|is this) built (on|with)\b/,
+    /\bwhat kind of ai (are you|is this)\b/,
     /\bare you (gpt|chatgpt|llama|claude|gemini|groq)\b/,
     /\brepeat (everything|the text|all of that) above\b/,
     /\bprint your (prompt|instructions|rules)\b/,
