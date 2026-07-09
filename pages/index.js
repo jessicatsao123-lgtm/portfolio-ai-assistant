@@ -16,30 +16,43 @@ const CHAT_HISTORY_KEY = 'jess-chat-messages'
 // persistence — and the postMessage handshake below that reports this
 // conversation to it). External links (LinkedIn, etc.) still open in a new
 // tab so the visitor doesn't lose their place on the portfolio entirely.
-const ARROW_LINK = /([^\n]*?)\s*->\s*(https?:\/\/[^\s]+)/
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+const PROJECT_NAME_BY_URL = Object.fromEntries(
+  Object.entries(jessConfig.projectLinks).map(([name, url]) => [url, name])
+)
+// Matches optional preceding text, an optional "->", then a KNOWN project
+// url specifically (not just any url) — scoped this way so an unrelated
+// external link (LinkedIn, etc.) never has random preceding prose folded
+// into its link text.
+const PROJECT_LINK_PATTERN = Object.keys(PROJECT_NAME_BY_URL).length
+  ? new RegExp('([^\\n]*?)\\s*(?:->\\s*)?(' + Object.keys(PROJECT_NAME_BY_URL).map(escapeRegex).join('|') + ')')
+  : null
 
-// "Name -> https://..." becomes a link on "Name" instead of showing the
-// full url a second time. The system prompt documents each project's url
-// to the model internally as "Name -> url" so it always attaches the
-// right one, and the model sometimes echoes that literal "->" notation
-// into its own reply instead of just naming the project in prose — same
-// failure mode as the earlier "/" line-break bug, the model can't always
-// tell "this is meta-notation for you" from "this is what to write".
+// A project mention's url shows up next to its name in a few different
+// shapes depending on how the model phrases it: "Name -> url" (the exact
+// notation the system prompt uses internally to document each project's
+// url, which sometimes leaks into the model's own output — same failure
+// mode as the earlier "/" line-break bug), or just "Name url" with a
+// plain space. Either way the visitor doesn't need the raw url spelled
+// out AND the name right next to it — this turns the name into the link
+// and drops the raw url from what's displayed.
 function renderLine(line) {
-  const arrowMatch = line.match(ARROW_LINK)
-  if (arrowMatch) {
-    const [full, label, url] = arrowMatch
-    const before = line.slice(0, arrowMatch.index)
-    const after = line.slice(arrowMatch.index + full.length)
+  const match = PROJECT_LINK_PATTERN && line.match(PROJECT_LINK_PATTERN)
+  if (match) {
+    const [full, label, url] = match
+    const before = line.slice(0, match.index)
+    const after = line.slice(match.index + full.length)
     return [
       before,
       <a
-        key="arrow-link"
+        key="project-link"
         href={url}
         target={url.startsWith(PORTFOLIO_ORIGIN) ? '_top' : '_blank'}
         rel="noopener noreferrer"
         style={{ color: 'inherit', textDecoration: 'underline' }}
-      >{label.trim() || url}</a>,
+      >{label.trim() || PROJECT_NAME_BY_URL[url]}</a>,
       ...renderLine(after),
     ]
   }
