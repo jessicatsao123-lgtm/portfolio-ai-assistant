@@ -1,7 +1,21 @@
 const jessConfig = require('../../jess.config.js');
+const { checkRateLimit, getClientIp } = require('../../lib/rate-limit');
 const PORTFOLIO_URL = process.env.PORTFOLIO_URL || 'https://jess-tsao-creative.vercel.app/';
 const CACHE_TTL = 60 * 60 * 1000;
 const DEFAULT_PAGE_MAX_CHARS = 2000;
+
+// The widget only ever runs embedded on the owner's own portfolio site, so
+// only that origin (derived from the already-required PORTFOLIO_URL) needs
+// to be able to call this endpoint. A wildcard here would let any other
+// website's visitors silently drain this deployment's Groq quota via a
+// hidden fetch() on an unrelated page.
+const ALLOWED_ORIGIN = (() => {
+  try {
+    return new URL(PORTFOLIO_URL).origin;
+  } catch {
+    return null;
+  }
+})();
 
 let portfolioCache = { content: null, fetchedAt: 0 };
 
@@ -655,14 +669,27 @@ ${portfolioContent}
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const requestOrigin = req.headers.origin;
+  if (ALLOWED_ORIGIN && requestOrigin === ALLOWED_ORIGIN) {
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [], knowledgeBase, name } = req.body;
+  // Backstop against a script hammering this endpoint directly (bypassing
+  // CORS, which only constrains browsers). 20 messages / 10 min per IP is
+  // generous for a real conversation but blocks scripted floods that would
+  // otherwise burn through the shared Groq quota.
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`chat:${ip}`, 20, 10 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many messages, please slow down.' });
+  }
+
+  const { message, history = [], name } = req.body;
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
     return res.status(400).json({ error: 'Message is required' });
@@ -724,17 +751,17 @@ export default async function handler(req, res) {
     return sendResponse(res, pickRotating(jessConfig.offTopicResponses, history, visitorName));
   }
 
-  // Use knowledge base sent from the widget, or fall back to scraping the portfolio URL
+  // Portfolio content always comes from the server-side scrape/cache, never
+  // from the request body — a client-suppliable knowledgeBase field would be
+  // spliced straight into the system prompt, letting anyone who calls this
+  // API directly (not just the widget, which never sent this anyway) inject
+  // arbitrary "trusted source of truth" content ahead of the model's reply.
   let portfolioContent;
-  if (knowledgeBase && typeof knowledgeBase === 'string' && knowledgeBase.trim().length > 0) {
-    portfolioContent = knowledgeBase.trim();
-  } else {
-    try {
-      portfolioContent = await getPortfolioContent();
-    } catch (err) {
-      console.error('Failed to fetch portfolio:', err.message);
-      return res.status(500).json({ error: 'Could not load portfolio content. Please try again.' });
-    }
+  try {
+    portfolioContent = await getPortfolioContent();
+  } catch (err) {
+    console.error('Failed to fetch portfolio:', err.message);
+    return res.status(500).json({ error: 'Could not load portfolio content. Please try again.' });
   }
 
   const systemPrompt = buildSystemPrompt(ownerName, ownerEmail, portfolioContent, visitorName);
